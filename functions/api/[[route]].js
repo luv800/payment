@@ -5,7 +5,7 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '');
 
-  // 1. CORS Preflight
+  // CORS Preflight
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -17,104 +17,82 @@ export async function onRequest(context) {
     });
   }
 
-  // 2. Handle payment initiation (supports both UPI and Card)
-  if (path.endsWith('/payments/create') || path.endsWith('/v1/payments') || path.endsWith('/payments')) {
-    if (request.method !== 'POST') {
-      return Response.json({ error: 'Method not allowed' }, { status: 405 });
-    }
-    return handleCreatePayment(context);
+  // 1. Order / Payment Session Creation
+  if (path.endsWith('/payments/create') || path.endsWith('/v1/payments')) {
+    if (request.method !== 'POST') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    return handleCreateYoupiPayment(context);
   }
 
-  // 3. Webhook handling
+  // 2. YouPI Webhook Verification
   if (path.endsWith('/payments/webhook')) {
-    if (request.method !== 'POST') {
-      return Response.json({ error: 'Method not allowed' }, { status: 405 });
-    }
-    return handleGatewayWebhook(context);
+    if (request.method !== 'POST') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    return handleYoupiWebhook(context);
   }
 
-  return Response.json(
-    { error: `Endpoint not found: ${url.pathname}` }, 
-    { status: 404 }
-  );
+  return Response.json({ error: `Endpoint not found: ${url.pathname}` }, { status: 404 });
 }
 
-async function handleCreatePayment(context) {
+async function handleCreateYoupiPayment(context) {
   const { request, env } = context;
 
   try {
     const body = await request.json();
-    const { 
-      orderId, 
-      amount, 
-      paymentMethod, 
-      cardLast4, 
-      cardHolder, 
-      customerPhone, 
-      customerName, 
-      branch, 
-      items 
-    } = body;
+    const { orderId, amount, customerPhone, customerName, branch, items, coupon } = body;
 
     if (!orderId || !amount) {
       return Response.json({ error: 'Missing required order details' }, { status: 400 });
     }
 
-    const payMode = paymentMethod === 'CARD' ? `CARD (Ending ${cardLast4})` : 'UPI';
-    const authRef = Math.random().toString(36).substring(2, 9).toUpperCase();
-
-    // Persist order to Cloudflare D1
+    // Persist order in D1
     if (env.DB) {
       const ts = new Date().toISOString();
-      const status = paymentMethod === 'CARD' ? 'PAID' : 'PENDING';
       try {
         await env.DB.prepare(
-          `INSERT OR IGNORE INTO orders (cid, ts, status, phone, name, branch, mode, pay, subtotal, total, items, payment_ref)
-           VALUES (?, ?, ?, ?, ?, ?, 'Delivery', ?, ?, ?, ?, ?)`
+          `INSERT OR IGNORE INTO orders (cid, ts, status, phone, name, branch, mode, pay, subtotal, total, items)
+           VALUES (?, ?, 'PENDING', ?, ?, ?, 'Delivery', 'YouPI', ?, ?, ?)`
         ).bind(
           orderId,
           ts,
-          status,
           customerPhone || '9462942290',
-          customerName || cardHolder || 'Guest',
+          customerName || 'Guest',
           branch || 'Borkheda',
-          payMode,
           amount,
           amount,
-          JSON.stringify(items || []),
-          paymentMethod === 'CARD' ? `CARD-${authRef}` : null
+          JSON.stringify(items || [])
         ).run();
       } catch (dbErr) {
         console.warn('D1 insert error:', dbErr.message);
       }
     }
 
-    // Response for Card
-    if (paymentMethod === 'CARD') {
-      return Response.json({
-        success: true,
-        orderId: orderId,
-        paymentMethod: 'CARD',
-        authRef: authRef,
-        amount: Number(amount).toFixed(2)
-      }, {
-        status: 200,
-        headers: { 'Access-Control-Allow-Origin': '*' }
-      });
-    }
+    // Contact YouPI-PG Gateway API
+    const youpiApiUrl = (env.YOUPI_API_URL || 'https://creditpay.pages.dev').replace(/\/+$/, '');
+    const origin = new URL(request.url).origin;
 
-    // Response for UPI with your updated BharatPe UPI ID
-    const upiVpa = env.UPI_VPA || 'BHARATPE.9V0C0B1Y6C197301@unitype';
-    const payeeName = env.UPI_PAYEE_NAME || 'Hungerr Station';
-    const note = `Order ${orderId}`;
-    const upiUri = `upi://pay?pa=${encodeURIComponent(upiVpa)}&pn=${encodeURIComponent(payeeName)}&am=${Number(amount).toFixed(2)}&cu=INR&tn=${encodeURIComponent(note)}&tr=${encodeURIComponent(orderId)}`;
+    const gatewayRes = await fetch(`${youpiApiUrl}/api/v1/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Merchant-Id': env.YOUPI_MERCHANT_ID || 'hungerr-station',
+      },
+      body: JSON.stringify({
+        orderId: orderId,
+        amount: Number(amount).toFixed(2),
+        currency: 'INR',
+        returnUrl: `${origin}/?payment_status=complete&order_id=${encodeURIComponent(orderId)}`,
+      }),
+    });
+
+    const data = await gatewayRes.json();
+    if (!gatewayRes.ok) {
+      throw new Error(data.error || 'Failed to initiate YouPI payment session');
+    }
 
     return Response.json({
       success: true,
       orderId: orderId,
-      amount: Number(amount).toFixed(2),
-      upiUri: upiUri,
-      qrUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUri)}`,
+      checkoutUrl: data.checkoutUrl,
+      paymentId: data.paymentId || data.id,
     }, {
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*' }
@@ -128,21 +106,60 @@ async function handleCreatePayment(context) {
   }
 }
 
-async function handleGatewayWebhook(context) {
+async function handleYoupiWebhook(context) {
   const { request, env } = context;
+  const signature = request.headers.get('x-gateway-signature');
   const rawBody = await request.text();
 
+  if (!signature) {
+    return new Response('Missing gateway signature', { status: 400 });
+  }
+
   try {
-    const event = JSON.parse(rawBody);
-    if (env.DB && event.orderId) {
-      if (event.status === 'SUCCESS' || event.event === 'SUCCESS') {
-        await env.DB.prepare(
-          `UPDATE orders SET status = 'PAID', payment_ref = ?, utr = ? WHERE cid = ?`
-        ).bind(event.paymentId || 'GATEWAY-PAID', event.utr || '', event.orderId).run();
+    const webhookSecret = env.YOUPI_WEBHOOK_SECRET || '';
+    if (webhookSecret) {
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(webhookSecret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['verify']
+      );
+
+      const sigHex = signature.replace(/^sha256=/, '');
+      const sigBytes = hexToBytes(sigHex);
+      const isValid = await crypto.subtle.verify('HMAC', key, sigBytes, encoder.encode(rawBody));
+
+      if (!isValid) {
+        return new Response('Invalid webhook signature', { status: 400 });
       }
     }
+
+    const event = JSON.parse(rawBody);
+
+    if (env.DB && event.orderId) {
+      if (event.event === 'SUCCESS' || event.status === 'SUCCESS') {
+        await env.DB.prepare(
+          `UPDATE orders SET status = 'PAID', payment_ref = ?, utr = ? WHERE cid = ?`
+        ).bind(event.paymentId || event.id || '', event.utr || '', event.orderId).run();
+      } else {
+        await env.DB.prepare(
+          `UPDATE orders SET status = ? WHERE cid = ?`
+        ).bind(event.event || 'FAILED', event.orderId).run();
+      }
+    }
+
     return Response.json({ received: true }, { status: 200 });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
+}
+
+function hexToBytes(hex) {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  return bytes;
 }
