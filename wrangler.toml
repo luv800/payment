@@ -10,3 +10,5 @@ database_id = "054ac9ef-ff11-4d8b-82af-a95830c706e5"
 [vars]
 YOUPI_API_URL = "https://creditpay.pages.dev"
 YOUPI_MERCHANT_ID = "hungerr_station_borkheda"
+UPI_VPA = "BHARATPE.9V0C0B1Y6C197301@unitype"
+UPI_PAYEE_NAME = "Hungerr Station"

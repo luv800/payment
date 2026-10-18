@@ -103,8 +103,8 @@ async function handleCreatePayment(context) {
       });
     }
 
-    // Response for UPI
-    const upiVpa = env.UPI_VPA || '9462942290@okbizaxis';
+    // Response for UPI with your updated BharatPe UPI ID
+    const upiVpa = env.UPI_VPA || 'BHARATPE.9V0C0B1Y6C197301@unitype';
     const payeeName = env.UPI_PAYEE_NAME || 'Hungerr Station';
     const note = `Order ${orderId}`;
     const upiUri = `upi://pay?pa=${encodeURIComponent(upiVpa)}&pn=${encodeURIComponent(payeeName)}&am=${Number(amount).toFixed(2)}&cu=INR&tn=${encodeURIComponent(note)}&tr=${encodeURIComponent(orderId)}`;
