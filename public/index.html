@@ -1,6 +1,30 @@
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
+
+ <!-- If testing locally with Cloudflare Pages, use the full local port or your tunnel URL -->
+<script src="http://localhost:7000/sdk/youpi.js"></script>
+ <button id="pay-button" style="background:#2563eb; color:white; padding:12px 24px; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
+  Pay ₹1.00 with UPI
+</button>
+
+<script>
+  document.getElementById('pay-button').addEventListener('click', function () {
+    if (window.Youpi) {
+      window.Youpi.pay({
+        amount: 1.00,
+        currency: 'INR',
+        name: 'CreditPay',
+        description: 'Order Demo Checkout',
+        handler: function (response) {
+          alert('Payment Recorded! Reference / UTR: ' + response.utr);
+        }
+      });
+    } else {
+      alert('YouPI SDK not loaded. Ensure your payment gateway server is running.');
+    }
+  });
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
