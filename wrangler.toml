@@ -6,3 +6,7 @@ compatibility_date = "2025-10-01"
 binding = "DB"
 database_name = "hungerr-db"
 database_id = "054ac9ef-ff11-4d8b-82af-a95830c706e5"
+
+[vars]
+YOUPI_API_URL = "https://creditpay.pages.dev"
+YOUPI_MERCHANT_ID = "hungerr_station_borkheda"

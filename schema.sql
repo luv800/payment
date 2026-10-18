@@ -1,11 +1,30 @@
 CREATE TABLE IF NOT EXISTS customers (
-  phone TEXT PRIMARY KEY, name TEXT NOT NULL, gender TEXT, dob TEXT, branch TEXT,
-  created_at TEXT NOT NULL, last_seen TEXT NOT NULL
+  phone TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  gender TEXT,
+  dob TEXT,
+  branch TEXT,
+  created_at TEXT NOT NULL,
+  last_seen TEXT NOT NULL
 );
+
 CREATE TABLE IF NOT EXISTS orders (
-  seq INTEGER PRIMARY KEY AUTOINCREMENT, cid TEXT UNIQUE NOT NULL, ts TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'New', phone TEXT NOT NULL, name TEXT NOT NULL, branch TEXT,
-  mode TEXT, pay TEXT, subtotal INTEGER, total INTEGER, items TEXT NOT NULL
+  seq INTEGER PRIMARY KEY AUTOINCREMENT,
+  cid TEXT UNIQUE NOT NULL,
+  ts TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'New',
+  phone TEXT NOT NULL,
+  name TEXT NOT NULL,
+  branch TEXT,
+  mode TEXT,
+  pay TEXT,
+  subtotal INTEGER,
+  total INTEGER,
+  items TEXT NOT NULL,
+  payment_ref TEXT,
+  utr TEXT
 );
+
 CREATE INDEX IF NOT EXISTS idx_orders_ts ON orders(ts);
+CREATE INDEX IF NOT EXISTS idx_orders_cid ON orders(cid);
 CREATE TABLE IF NOT EXISTS attempts (ip TEXT, ts INTEGER);
