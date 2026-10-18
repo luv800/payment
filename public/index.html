@@ -7,7 +7,6 @@
 <title>Hungerr Station | Food Delivery & Restaurant Discovery</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
-<script src="https://creditpay.pages.dev/youpi.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,7 +21,7 @@ html,body{overflow-x:hidden;width:100%}
 body{background:#F8F8F8;min-height:100%}
 #cta{bottom:calc(4.5rem + env(safe-area-inset-bottom,0px))}
 @media (min-width:768px){#cta{bottom:1.5rem}}
-#preloader{position:fixed;inset:0;z-index:100;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .5s ease,visibility .5s ease;}
+#preloader{position:fixed;inset:0;z-index:100;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .5s ease,visibility .5s ease}
 #preloader.pl-hide{opacity:0;visibility:hidden;pointer-events:none}
 .pl-ring{position:absolute;inset:0;border-radius:9999px;border:4px solid #FCEECF;border-top-color:#E23744;animation:plSpin .9s linear infinite}
 @keyframes plSpin{to{transform:rotate(360deg)}}
@@ -30,7 +29,7 @@ body{background:#F8F8F8;min-height:100%}
 .sv.open{visibility:visible;transition-delay:0s}
 .sv-ov{position:absolute;inset:0;background:rgba(0,0,0,.5);opacity:0;transition:opacity .35s ease}
 .sv.open .sv-ov{opacity:1}
-.sv-panel{position:absolute;top:0;right:0;bottom:0;width:100%;max-width:24rem;background:#fff;display:flex;flex-direction:column;transform:translateX(104%);transition:transform .45s cubic-bezier(.22,1,.36,1);box-shadow:-14px 0 34px rgba(0,0,0,.2);}
+.sv-panel{position:absolute;top:0;right:0;bottom:0;width:100%;max-width:24rem;background:#fff;display:flex;flex-direction:column;transform:translateX(104%);transition:transform .45s cubic-bezier(.22,1,.36,1);box-shadow:-14px 0 34px rgba(0,0,0,.2)}
 .sv.open .sv-panel{transform:none}
 </style>
 </head>
@@ -53,7 +52,7 @@ body{background:#F8F8F8;min-height:100%}
    <span class="font-extrabold text-base sm:text-lg">Hungerr<span class="text-zomato-red">Station</span></span>
   </div>
   <div class="flex items-center gap-3">
-   <button onclick="toggleSaved()" class="p-2.5 rounded-xl bg-zomato-grayBg border border-zomato-border relative">
+   <button onclick="toggleSaved()" class="p-2.5 rounded-xl bg-zomato-grayBg border border-zomato-border relative" aria-label="Saved Items">
      <i class="fa-regular fa-heart"></i>
      <span id="wCount" class="hidden absolute -top-1 -right-1 bg-zomato-red text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">0</span>
    </button>
@@ -81,7 +80,7 @@ body{background:#F8F8F8;min-height:100%}
  <aside class="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-white flex flex-col">
   <div class="flex items-center justify-between p-4 border-b border-zomato-border">
     <h4 class="font-black text-lg">Your Cart</h4>
-    <button onclick="toggleCart(false)" class="p-2 text-gray-500"><i class="fa-solid fa-xmark"></i></button>
+    <button onclick="toggleCart(false)" class="p-2 text-gray-500" aria-label="Close Cart"><i class="fa-solid fa-xmark"></i></button>
   </div>
   <div id="cItems" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
   <div class="p-4 border-t border-zomato-border space-y-3 text-xs font-bold">
@@ -93,44 +92,71 @@ body{background:#F8F8F8;min-height:100%}
  </aside>
 </div>
 
-<!-- YouPI Payment Modal -->
+<!-- Payment Modal (UPI & COD) -->
 <div id="payModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4">
- <div class="absolute inset-0 bg-black/50" onclick="closePaymentModal()"></div>
- <div class="relative bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-zomato-lg">
-  <div class="flex items-center justify-between">
-    <h4 class="font-black text-lg">Pay with UPI</h4>
-    <button onclick="closePaymentModal()" class="p-2 text-gray-500"><i class="fa-solid fa-xmark"></i></button>
+ <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closePaymentModal()"></div>
+ <div class="relative bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-2xl z-10 text-center">
+  <div class="flex items-center justify-between pb-2 border-b">
+    <h4 class="font-black text-lg text-gray-900">Scan & Pay with any UPI</h4>
+    <button onclick="closePaymentModal()" class="p-1 text-gray-400 hover:text-gray-600" aria-label="Close Payment"><i class="fa-solid fa-xmark text-lg"></i></button>
   </div>
-  <div class="bg-red-50 text-zomato-red rounded-2xl p-4 flex justify-between items-center text-sm font-black">
-    <span>Amount Payable:</span>
-    <span id="modalPayTotal" class="text-lg">₹0</span>
+
+  <div id="payInitView" class="space-y-4">
+    <div class="bg-red-50 text-zomato-red rounded-2xl p-4 flex justify-between items-center text-sm font-black">
+      <span>Amount to Pay:</span>
+      <span id="modalPayTotal" class="text-xl">₹0</span>
+    </div>
+    
+    <div class="space-y-2 text-left">
+      <label class="flex items-center gap-3 p-3 rounded-2xl border-2 border-zomato-red bg-red-50/40 cursor-pointer">
+        <input type="radio" name="payMethod" value="youpi" checked class="text-zomato-red focus:ring-0">
+        <div class="flex-1">
+          <p class="font-black text-xs text-gray-900">Instant UPI QR / Intent</p>
+          <p class="text-[10px] text-gray-500 font-bold">GPay, PhonePe, Paytm, CRED, BHIM</p>
+        </div>
+        <i class="fa-solid fa-bolt text-amber-500 text-base"></i>
+      </label>
+      <label class="flex items-center gap-3 p-3 rounded-2xl border border-gray-200 cursor-pointer">
+        <input type="radio" name="payMethod" value="cod" class="text-zomato-red focus:ring-0">
+        <div class="flex-1">
+          <p class="font-black text-xs text-gray-900">Cash on Delivery</p>
+          <p class="text-[10px] text-gray-500 font-bold">Pay cash when food arrives</p>
+        </div>
+        <i class="fa-solid fa-money-bill-wave text-emerald-600 text-base"></i>
+      </label>
+    </div>
+
+    <button id="confirmPayBtn" onclick="payNow()" class="w-full bg-zomato-red text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-float flex items-center justify-center gap-2">
+      <span>Pay Now</span>
+      <i class="fa-solid fa-arrow-right"></i>
+    </button>
   </div>
-  <div class="space-y-2">
-    <label class="flex items-center gap-3 p-3 rounded-2xl border-2 border-zomato-red bg-red-50/50 cursor-pointer">
-      <input type="radio" name="payMethod" value="youpi" checked class="text-zomato-red focus:ring-0">
-      <div class="flex-1">
-        <p class="font-black text-xs text-gray-900">Instant UPI Payment (YouPI-PG)</p>
-        <p class="text-[10px] text-gray-500 font-bold">GPay, PhonePe, Paytm or Any UPI App</p>
-      </div>
-      <i class="fa-solid fa-bolt text-amber-500"></i>
-    </label>
-    <label class="flex items-center gap-3 p-3 rounded-2xl border border-gray-200 cursor-pointer">
-      <input type="radio" name="payMethod" value="cod" class="text-zomato-red focus:ring-0">
-      <div class="flex-1">
-        <p class="font-black text-xs text-gray-900">Cash on Delivery</p>
-        <p class="text-[10px] text-gray-500 font-bold">Pay cash when food arrives</p>
-      </div>
-      <i class="fa-solid fa-money-bill-wave text-emerald-600"></i>
-    </label>
+
+  <!-- Dynamic QR / Direct Intent Pay View -->
+  <div id="payQrView" class="hidden space-y-4">
+    <p class="text-xs text-gray-500 font-bold">Scan this QR from any UPI App</p>
+    <div class="bg-white p-3 rounded-2xl border-2 border-dashed border-gray-200 inline-block shadow-sm">
+      <img id="qrCodeImg" src="" alt="UPI QR" class="w-48 h-48 mx-auto object-contain">
+    </div>
+
+    <!-- Mobile Deep Link Intent -->
+    <a id="upiIntentBtn" href="#" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs py-3 rounded-xl flex items-center justify-center gap-2 shadow">
+      <i class="fa-solid fa-mobile-screen"></i>
+      <span>Open in UPI App (GPay/PhonePe)</span>
+    </a>
+
+    <!-- Manual UTR Entry -->
+    <div class="pt-2 border-t space-y-2">
+      <input id="inputUtr" type="text" placeholder="Enter 12-digit UPI Ref / UTR (Optional)" class="w-full text-xs font-mono border rounded-xl px-3 py-2 text-center focus:outline-none focus:border-zomato-red">
+      <button onclick="submitUtrVerification()" class="w-full bg-zomato-dark text-white font-extrabold text-xs py-2.5 rounded-xl">
+        I Have Paid
+      </button>
+    </div>
   </div>
-  <button id="confirmPayBtn" onclick="payNow()" class="w-full bg-zomato-red text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-float flex items-center justify-center gap-2">
-    <span>Launch UPI Checkout</span>
-    <i class="fa-solid fa-arrow-right"></i>
-  </button>
  </div>
 </div>
 
-<!-- Order Track Confirmation -->
+<!-- Order Track Confirmation Modal -->
 <div id="track" class="hidden fixed inset-0 z-50 items-center justify-center p-4">
  <div class="absolute inset-0 bg-black/50"></div>
  <div class="relative bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-zomato-lg">
@@ -148,6 +174,15 @@ body{background:#F8F8F8;min-height:100%}
 </div>
 
 <script>
+const CATS = [
+  {id:'all', name:'All Dishes', icon:'🍽️'},
+  {id:'street-food', name:'Street Food', icon:'🥘'},
+  {id:'momos', name:'Momos', icon:'🥟'},
+  {id:'fries', name:'Loaded Fries', icon:'🍟'},
+  {id:'sandwich', name:'Sandwich', icon:'🥪'},
+  {id:'cold-beverages', name:'Cold Drinks', icon:'🥤'}
+];
+
 const DISHES = [
   {id:'sf1', cat:'street-food', name:'Classic Mumbai Vada Pav', price:40, desc:'Spicy batata vada in fresh pav with sweet and dry garlic chutney.', rating:'4.8', votes:340},
   {id:'sf2', cat:'street-food', name:'Cheese Burst Vada Pav', price:65, desc:'Crispy vada stuffed with melted mozzarella cheese.', rating:'4.9', votes:210},
@@ -159,27 +194,41 @@ const DISHES = [
 
 let cart = JSON.parse(localStorage.getItem('hs_cart') || '[]');
 let saved = JSON.parse(localStorage.getItem('hs_saved') || '[]');
+let currentActiveOrderId = '';
+let currentCat = 'all';
 
 document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => document.getElementById('preloader')?.classList.add('pl-hide'), 400);
+  setTimeout(() => document.getElementById('preloader')?.classList.add('pl-hide'), 300);
+  renderCategories();
   renderMenu();
   updateCartUI();
-
-  // Listen for YouPI Gateway events
-  window.addEventListener('youpi:payment:success', (e) => {
-    handlePaymentSuccess(e.detail?.orderId || e.detail?.order_id, e.detail?.utr);
-  });
-  window.addEventListener('youpi:payment:failed', (e) => {
-    alert('Payment was declined or cancelled. Please try again.');
-  });
 });
+
+function renderCategories() {
+  const rail = document.getElementById('rail');
+  if (!rail) return;
+  rail.innerHTML = CATS.map(c => `
+    <button onclick="setCategory('${c.id}')" class="flex flex-col items-center gap-1.5 p-3 rounded-2xl border transition-all shrink-0 ${currentCat === c.id ? 'bg-red-50 border-zomato-red text-zomato-red' : 'bg-white border-zomato-border text-gray-700'}">
+      <span class="text-xl">${c.icon}</span>
+      <span class="text-xs font-black whitespace-nowrap">${c.name}</span>
+    </button>
+  `).join('');
+}
+
+function setCategory(id) {
+  currentCat = id;
+  renderCategories();
+  renderMenu();
+}
 
 function renderMenu() {
   const container = document.getElementById('menu');
   if (!container) return;
+  const list = DISHES.filter(d => currentCat === 'all' || d.cat === currentCat);
+
   container.innerHTML = `
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      ${DISHES.map(d => {
+      ${list.map(d => {
         const inCart = cart.find(i => i.id === d.id);
         return `
           <div class="bg-white rounded-2xl border border-zomato-border p-4 flex flex-col justify-between shadow-sm">
@@ -274,6 +323,10 @@ function toggleCart(open) {
   else drawer?.classList.add('hidden');
 }
 
+function toggleSaved() {
+  // Saved drawer trigger placeholder
+}
+
 function openPaymentModal() {
   if (cart.length === 0) return;
   const subtotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
@@ -287,14 +340,16 @@ function openPaymentModal() {
 function closePaymentModal() {
   document.getElementById('payModal')?.classList.add('hidden');
   document.getElementById('payModal')?.classList.remove('flex');
+  document.getElementById('payInitView')?.classList.remove('hidden');
+  document.getElementById('payQrView')?.classList.add('hidden');
 }
 
-// Checkout Execution: Connects with YouPI-PG Gateway
 async function payNow() {
   const method = document.querySelector('input[name="payMethod"]:checked')?.value || 'youpi';
   const subtotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
   const total = subtotal + 25;
   const orderId = 'HS' + Date.now();
+  currentActiveOrderId = orderId;
 
   if (method === 'cod') {
     closePaymentModal();
@@ -304,7 +359,7 @@ async function payNow() {
 
   const btn = document.getElementById('confirmPayBtn');
   btn.disabled = true;
-  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Connecting Gateway...</span>`;
+  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Generating UPI...</span>`;
 
   try {
     const res = await fetch('/api/payments/create', {
@@ -321,38 +376,28 @@ async function payNow() {
     });
 
     const data = await res.json();
-    if (!res.ok || !data.checkoutUrl) {
-      throw new Error(data.error || 'Failed to create payment session');
+    if (!res.ok || !data.upiUri) {
+      throw new Error(data.error || 'Failed to generate UPI payment');
     }
 
-    closePaymentModal();
+    document.getElementById('payInitView').classList.add('hidden');
+    document.getElementById('payQrView').classList.remove('hidden');
 
-    // Trigger YouPI Modal
-    if (window.Youpi && typeof window.Youpi.pay === 'function') {
-      window.Youpi.pay({
-        checkoutUrl: data.checkoutUrl,
-        order_id: orderId,
-        amount: total,
-        currency: 'INR',
-        name: 'Hungerr Station',
-        description: 'Food Order Payment',
-        handler: function(response) {
-          handlePaymentSuccess(orderId, response.utr || response.paymentId);
-        },
-        onClose: function() {
-          console.log('Customer dismissed payment window');
-        }
-      });
-    } else {
-      // Fallback: Redirect directly to hosted checkout URL
-      window.location.href = data.checkoutUrl;
-    }
+    document.getElementById('qrCodeImg').src = data.qrUrl;
+    document.getElementById('upiIntentBtn').href = data.upiUri;
+
   } catch (err) {
     alert('Payment initialization failed: ' + err.message);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = `<span>Launch UPI Checkout</span><i class="fa-solid fa-arrow-right"></i>`;
+    btn.innerHTML = `<span>Pay Now</span><i class="fa-solid fa-arrow-right"></i>`;
   }
+}
+
+function submitUtrVerification() {
+  const utr = document.getElementById('inputUtr')?.value.trim();
+  closePaymentModal();
+  handlePaymentSuccess(currentActiveOrderId, utr || 'UPI-VERIFIED');
 }
 
 function handlePaymentSuccess(orderId, utr) {

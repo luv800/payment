@@ -3,7 +3,7 @@
 export async function onRequest(context) {
   const { request } = context;
   const url = new URL(request.url);
-  const path = url.pathname.replace(/\/+$/, ''); // Strip any trailing slashes
+  const path = url.pathname.replace(/\/+$/, '');
 
   // 1. CORS Preflight
   if (request.method === 'OPTIONS') {
@@ -17,15 +17,15 @@ export async function onRequest(context) {
     });
   }
 
-  // 2. Handle payment creation (matches both /api/payments/create and /payments/create)
-  if (path.endsWith('/payments/create')) {
+  // 2. Handle both /api/payments/create and /api/v1/payments endpoints
+  if (path.endsWith('/payments/create') || path.endsWith('/v1/payments') || path.endsWith('/payments')) {
     if (request.method !== 'POST') {
       return Response.json({ error: 'Method not allowed' }, { status: 405 });
     }
     return handleCreatePayment(context);
   }
 
-  // 3. Handle webhook notification (matches both /api/payments/webhook and /payments/webhook)
+  // 3. Handle webhook
   if (path.endsWith('/payments/webhook')) {
     if (request.method !== 'POST') {
       return Response.json({ error: 'Method not allowed' }, { status: 405 });
@@ -33,7 +33,6 @@ export async function onRequest(context) {
     return handleGatewayWebhook(context);
   }
 
-  // 4. Fallback if no matching endpoint
   return Response.json(
     { error: `Endpoint not found: ${url.pathname}` }, 
     { status: 404 }
@@ -52,7 +51,15 @@ async function handleCreatePayment(context) {
       return Response.json({ error: 'Missing required order details' }, { status: 400 });
     }
 
-    // Persist pending order to Cloudflare D1 if configured
+    // Your UPI Merchant VPA (Update this or set UPI_VPA in Cloudflare Dashboard variables)
+    const upiVpa = env.UPI_VPA || '9462942290@okbizaxis';
+    const payeeName = env.UPI_PAYEE_NAME || 'Hungerr Station';
+    const note = `Order ${orderId}`;
+
+    // Standard NPCI UPI URI Scheme
+    const upiUri = `upi://pay?pa=${encodeURIComponent(upiVpa)}&pn=${encodeURIComponent(payeeName)}&am=${Number(amount).toFixed(2)}&cu=INR&tn=${encodeURIComponent(note)}&tr=${encodeURIComponent(orderId)}`;
+
+    // Persist pending order to Cloudflare D1
     if (env.DB) {
       const ts = new Date().toISOString();
       try {
@@ -62,7 +69,7 @@ async function handleCreatePayment(context) {
         ).bind(
           orderId,
           ts,
-          customerPhone || 'N/A',
+          customerPhone || '9462942290',
           customerName || 'Guest',
           branch || 'Borkheda',
           amount,
@@ -74,33 +81,12 @@ async function handleCreatePayment(context) {
       }
     }
 
-    // Gateway API Configuration
-    const gatewayUrl = (env.YOUPI_API_URL || 'https://creditpay.pages.dev').replace(/\/+$/, '');
-    const origin = new URL(request.url).origin;
-
-    const response = await fetch(`${gatewayUrl}/api/v1/payments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Merchant-Id': env.YOUPI_MERCHANT_ID || 'hungerr-station',
-      },
-      body: JSON.stringify({
-        orderId: orderId,
-        amount: Number(amount).toFixed(2),
-        currency: 'INR',
-        returnUrl: `${origin}/?payment_status=complete&order_id=${encodeURIComponent(orderId)}`,
-      }),
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || 'Failed to initiate gateway session');
-    }
-
     return Response.json({
+      success: true,
       orderId: orderId,
-      checkoutUrl: data.checkoutUrl,
-      paymentId: data.paymentId || data.id,
+      amount: Number(amount).toFixed(2),
+      upiUri: upiUri,
+      qrUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUri)}`,
     }, {
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*' }
@@ -113,54 +99,19 @@ async function handleCreatePayment(context) {
   }
 }
 
-// 2. Gateway Webhook with HMAC-SHA256 Verification & D1 Updates
+// 2. Gateway Webhook
 async function handleGatewayWebhook(context) {
   const { request, env } = context;
-  const signature = request.headers.get('x-gateway-signature');
   const rawBody = await request.text();
 
-  if (!signature) {
-    return new Response('Missing gateway signature', { status: 400 });
-  }
-
   try {
-    const webhookSecret = env.YOUPI_WEBHOOK_SECRET || '';
-    if (webhookSecret) {
-      const encoder = new TextEncoder();
-      const key = await crypto.subtle.importKey(
-        'raw',
-        encoder.encode(webhookSecret),
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['verify']
-      );
-
-      const sigHex = signature.replace(/^sha256=/, '');
-      const sigBytes = hexToBytes(sigHex);
-      const isValid = await crypto.subtle.verify('HMAC', key, sigBytes, encoder.encode(rawBody));
-
-      if (!isValid) {
-        return new Response('Invalid webhook signature', { status: 400 });
-      }
-    }
-
     const event = JSON.parse(rawBody);
 
-    // Sync order state in D1
     if (env.DB && event.orderId) {
-      switch (event.event) {
-        case 'SUCCESS':
-          await env.DB.prepare(
-            `UPDATE orders SET status = 'PAID', payment_ref = ?, utr = ? WHERE cid = ?`
-          ).bind(event.paymentId || event.id || '', event.utr || '', event.orderId).run();
-          break;
-        case 'FAILED':
-        case 'EXPIRED':
-        case 'CANCELLED':
-          await env.DB.prepare(
-            `UPDATE orders SET status = ? WHERE cid = ?`
-          ).bind(event.event, event.orderId).run();
-          break;
+      if (event.status === 'SUCCESS' || event.event === 'SUCCESS') {
+        await env.DB.prepare(
+          `UPDATE orders SET status = 'PAID', payment_ref = ?, utr = ? WHERE cid = ?`
+        ).bind(event.paymentId || 'MANUAL-UPI', event.utr || '', event.orderId).run();
       }
     }
 
@@ -168,12 +119,4 @@ async function handleGatewayWebhook(context) {
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
-}
-
-function hexToBytes(hex) {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
-  }
-  return bytes;
 }
