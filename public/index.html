@@ -68,19 +68,25 @@ body{background:#F8F8F8;min-height:100%}
  <aside class="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-white flex flex-col">
   <div class="flex items-center justify-between p-4 border-b border-zomato-border">
     <h4 class="font-black text-lg">Your Cart</h4>
-    <button onclick="toggleCart(false)" class="p-2 text-gray-500"><i class="fa-solid fa-xmark"></i></button>
+    <button onclick="toggleCart(false)" class="p-2 text-gray-500" aria-label="Close Cart"><i class="fa-solid fa-xmark"></i></button>
   </div>
   <div id="cItems" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
   <div class="p-4 border-t border-zomato-border space-y-3 text-xs font-bold">
+   <!-- Coupon Code Input -->
+   <div class="flex gap-2">
+     <input id="couponInput" type="text" placeholder="Promo Code (e.g. LOVE99)" class="flex-1 border border-zomato-border rounded-xl px-3 py-2 uppercase focus:outline-none focus:border-zomato-red">
+     <button onclick="applyCoupon()" class="bg-zomato-dark hover:bg-black text-white px-4 rounded-xl font-black">Apply</button>
+   </div>
    <div class="flex justify-between text-gray-500"><span>Subtotal</span><span id="cSubtotal">₹0</span></div>
-   <div class="flex justify-between text-gray-500"><span>Delivery Fee</span><span id="cFee">₹25</span></div>
-   <div class="flex justify-between text-base font-black"><span>Total</span><span id="cTotal">₹0</span></div>
+   <div id="discRow" class="hidden flex justify-between text-emerald-600"><span>Discount (<span id="discCodeText"></span>)</span><span id="cDisc">-₹0</span></div>
+   <div class="flex justify-between text-emerald-600"><span>Delivery Fee</span><span class="font-black uppercase text-[10px] bg-emerald-50 px-2 py-0.5 rounded">FREE</span></div>
+   <div class="flex justify-between text-base font-black border-t pt-2"><span>Total</span><span id="cTotal">₹0</span></div>
    <button onclick="openPaymentModal()" class="w-full bg-zomato-red text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-float">Proceed to Pay</button>
   </div>
  </aside>
 </div>
 
-<!-- Multi-Method Payment Modal -->
+<!-- Payment Modal -->
 <div id="payModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4">
  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closePaymentModal()"></div>
  <div class="relative bg-white rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl z-10 text-center">
@@ -95,19 +101,18 @@ body{background:#F8F8F8;min-height:100%}
       <span id="modalPayTotal" class="text-xl">₹0</span>
     </div>
     
-    <!-- Payment Option Radio List -->
     <div class="space-y-2 text-left">
-      <!-- 1. UPI Option -->
+      <!-- UPI Option -->
       <label class="flex items-center gap-3 p-3 rounded-2xl border-2 border-zomato-red bg-red-50/40 cursor-pointer" onclick="selectPayOption('youpi')">
         <input type="radio" name="payMethod" value="youpi" checked class="text-zomato-red focus:ring-0">
         <div class="flex-1">
           <p class="font-black text-xs text-gray-900">UPI (GPay / PhonePe / Paytm / QR)</p>
-          <p class="text-[10px] text-gray-500 font-bold">Zero extra fees, instant verification</p>
+          <p class="text-[10px] text-gray-500 font-bold">BHARATPE.9V0C0B1Y6C197301@unitype</p>
         </div>
         <i class="fa-solid fa-bolt text-amber-500 text-base"></i>
       </label>
 
-      <!-- 2. Debit / Credit Card Option -->
+      <!-- Debit / Credit Card Option -->
       <label class="flex items-center gap-3 p-3 rounded-2xl border border-gray-200 cursor-pointer" onclick="selectPayOption('card')">
         <input type="radio" name="payMethod" value="card" class="text-zomato-red focus:ring-0">
         <div class="flex-1">
@@ -120,7 +125,6 @@ body{background:#F8F8F8;min-height:100%}
         </div>
       </label>
 
-      <!-- Card Input Fields (Collapsible) -->
       <div id="cardDetailsBlock" class="hidden p-3.5 border rounded-2xl bg-gray-50 space-y-2.5">
         <div>
           <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Card Number</label>
@@ -145,7 +149,7 @@ body{background:#F8F8F8;min-height:100%}
         </div>
       </div>
 
-      <!-- 3. Cash on Delivery -->
+      <!-- Cash on Delivery -->
       <label class="flex items-center gap-3 p-3 rounded-2xl border border-gray-200 cursor-pointer" onclick="selectPayOption('cod')">
         <input type="radio" name="payMethod" value="cod" class="text-zomato-red focus:ring-0">
         <div class="flex-1">
@@ -157,7 +161,7 @@ body{background:#F8F8F8;min-height:100%}
     </div>
 
     <button id="confirmPayBtn" onclick="payNow()" class="w-full bg-zomato-red text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-float flex items-center justify-center gap-2">
-      <span id="payBtnLabel">Pay Now</span>
+      <span id="payBtnLabel">Pay via UPI</span>
       <i class="fa-solid fa-arrow-right"></i>
     </button>
   </div>
@@ -169,13 +173,11 @@ body{background:#F8F8F8;min-height:100%}
       <img id="qrCodeImg" src="" alt="UPI QR" class="w-48 h-48 mx-auto object-contain">
     </div>
 
-    <!-- Mobile Deep Link Intent -->
     <a id="upiIntentBtn" href="#" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs py-3 rounded-xl flex items-center justify-center gap-2 shadow">
       <i class="fa-solid fa-mobile-screen"></i>
       <span>Open in UPI App (GPay/PhonePe)</span>
     </a>
 
-    <!-- Manual UTR Entry -->
     <div class="pt-2 border-t space-y-2">
       <input id="inputUtr" type="text" placeholder="Enter 12-digit UPI Ref / UTR" class="w-full text-xs font-mono border rounded-xl px-3 py-2 text-center focus:outline-none focus:border-zomato-red">
       <button onclick="submitUtrVerification()" class="w-full bg-zomato-dark text-white font-extrabold text-xs py-2.5 rounded-xl">
@@ -186,7 +188,7 @@ body{background:#F8F8F8;min-height:100%}
  </div>
 </div>
 
-<!-- Order Track Confirmation Modal -->
+<!-- Order Track Modal -->
 <div id="track" class="hidden fixed inset-0 z-50 items-center justify-center p-4">
  <div class="absolute inset-0 bg-black/50"></div>
  <div class="relative bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-zomato-lg text-center">
@@ -214,16 +216,17 @@ const CATS = [
 ];
 
 const DISHES = [
-  {id:'sf1', cat:'street-food', name:'Classic Mumbai Vada Pav', price:40, desc:'Spicy batata vada in fresh pav with sweet and dry garlic chutney.', rating:'4.8'},
-  {id:'sf2', cat:'street-food', name:'Cheese Burst Vada Pav', price:65, desc:'Crispy vada stuffed with melted mozzarella cheese.', rating:'4.9'},
-  {id:'fr1', cat:'fries', name:'Peri Peri Masala Fries', price:99, desc:'Crispy French fries tossed in authentic spicy peri-peri dust.', rating:'4.9'},
-  {id:'mo1', cat:'momos', name:'Veg Steamed Momos (6 Pcs)', price:70, desc:'Dumplings loaded with finely chopped vegetables and herbs.', rating:'4.7'},
-  {id:'sw1', cat:'sandwich', name:'Bombay Masala Grilled Sandwich', price:100, desc:'Potato masala, cucumber, tomatoes and mint chutney.', rating:'4.7'}
+  {id:'sf1', cat:'street-food', name:'Classic Mumbai Vada Pav', price:40, desc:'Spicy batata vada in fresh pav with sweet and dry garlic chutney.'},
+  {id:'sf2', cat:'street-food', name:'Cheese Burst Vada Pav', price:65, desc:'Crispy vada stuffed with melted mozzarella cheese.'},
+  {id:'fr1', cat:'fries', name:'Peri Peri Masala Fries', price:99, desc:'Crispy French fries tossed in authentic spicy peri-peri dust.'},
+  {id:'mo1', cat:'momos', name:'Veg Steamed Momos (6 Pcs)', price:70, desc:'Dumplings loaded with finely chopped vegetables and herbs.'},
+  {id:'sw1', cat:'sandwich', name:'Bombay Masala Grilled Sandwich', price:100, desc:'Potato masala, cucumber, tomatoes and mint chutney.'}
 ];
 
 let cart = JSON.parse(localStorage.getItem('hs_cart') || '[]');
 let currentActiveOrderId = '';
 let currentCat = 'all';
+let appliedCoupon = null; // Stores { code: 'LOVE99', rate: 0.99 }
 
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => document.getElementById('preloader')?.classList.add('pl-hide'), 300);
@@ -308,16 +311,43 @@ function saveCart() {
   localStorage.setItem('hs_cart', JSON.stringify(cart));
 }
 
+function applyCoupon() {
+  const code = (document.getElementById('couponInput')?.value || '').trim().toUpperCase();
+  if (code === 'LOVE99') {
+    appliedCoupon = { code: 'LOVE99', rate: 0.99 };
+    alert('Special 99% Discount Applied!');
+  } else if (code === 'HUNGER50') {
+    appliedCoupon = { code: 'HUNGER50', rate: 0.50 };
+    alert('50% Discount Applied!');
+  } else {
+    alert('Invalid Coupon Code');
+    appliedCoupon = null;
+  }
+  updateCartUI();
+}
+
 function updateCartUI() {
   const totalCount = cart.reduce((acc, i) => acc + i.qty, 0);
   const subtotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
-  const fee = totalCount > 0 ? 25 : 0;
-  const total = subtotal + fee;
+  
+  // Delivery fee removed (Zero default delivery charge)
+  const fee = 0;
+  
+  let discount = 0;
+  if (appliedCoupon && subtotal > 0) {
+    discount = Math.round(subtotal * appliedCoupon.rate);
+    document.getElementById('discRow')?.classList.remove('hidden');
+    document.getElementById('discCodeText').innerText = appliedCoupon.code;
+    document.getElementById('cDisc').innerText = `-₹${discount}`;
+  } else {
+    document.getElementById('discRow')?.classList.add('hidden');
+  }
+
+  const finalTotal = Math.max(1, subtotal - discount + fee); // minimum ₹1 for valid UPI intent
 
   document.getElementById('cCount').innerText = totalCount;
   document.getElementById('cSubtotal').innerText = `₹${subtotal}`;
-  document.getElementById('cFee').innerText = `₹${fee}`;
-  document.getElementById('cTotal').innerText = `₹${total}`;
+  document.getElementById('cTotal').innerText = `₹${totalCount > 0 ? finalTotal : 0}`;
 
   const cItems = document.getElementById('cItems');
   if (cItems) {
@@ -349,7 +379,12 @@ function toggleCart(open) {
 function openPaymentModal() {
   if (cart.length === 0) return;
   const subtotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
-  const total = subtotal + 25;
+  let discount = 0;
+  if (appliedCoupon) {
+    discount = Math.round(subtotal * appliedCoupon.rate);
+  }
+  const total = Math.max(1, subtotal - discount);
+
   document.getElementById('modalPayTotal').innerText = `₹${total}`;
   toggleCart(false);
   document.getElementById('payModal')?.classList.remove('hidden');
@@ -376,41 +411,36 @@ function selectPayOption(method) {
   }
 }
 
-// Input Formatters
 function formatCardNumber(input) {
   let val = input.value.replace(/\D/g, '').substring(0, 16);
   let parts = [];
-  for (let i = 0; i < val.length; i += 4) {
-    parts.push(val.substring(i, i + 4));
-  }
+  for (let i = 0; i < val.length; i += 4) parts.push(val.substring(i, i + 4));
   input.value = parts.join(' ');
 }
 
 function formatExpiry(input) {
   let val = input.value.replace(/\D/g, '').substring(0, 4);
-  if (val.length >= 3) {
-    input.value = val.substring(0, 2) + '/' + val.substring(2);
-  } else {
-    input.value = val;
-  }
+  if (val.length >= 3) input.value = val.substring(0, 2) + '/' + val.substring(2);
+  else input.value = val;
 }
 
-// Checkout Processing
 async function payNow() {
   const method = document.querySelector('input[name="payMethod"]:checked')?.value || 'youpi';
   const subtotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
-  const total = subtotal + 25;
+  let discount = 0;
+  if (appliedCoupon) {
+    discount = Math.round(subtotal * appliedCoupon.rate);
+  }
+  const total = Math.max(1, subtotal - discount);
   const orderId = 'HS' + Date.now();
   currentActiveOrderId = orderId;
 
-  // 1. Cash on Delivery
   if (method === 'cod') {
     closePaymentModal();
     handlePaymentSuccess(orderId, 'CASH-ON-DELIVERY', 'Cash on Delivery');
     return;
   }
 
-  // 2. Card Payment Option
   if (method === 'card') {
     const cardNum = document.getElementById('cardNumber')?.value.replace(/\s+/g, '');
     const cardExp = document.getElementById('cardExpiry')?.value;
@@ -440,6 +470,7 @@ async function payNow() {
           customerName: cardName,
           branch: 'Borkheda, Kota',
           items: cart,
+          coupon: appliedCoupon ? appliedCoupon.code : null
         }),
       });
 
@@ -457,7 +488,7 @@ async function payNow() {
     return;
   }
 
-  // 3. UPI Option
+  // UPI Method
   const btn = document.getElementById('confirmPayBtn');
   btn.disabled = true;
   btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Generating UPI...</span>`;
@@ -474,6 +505,7 @@ async function payNow() {
         customerName: 'Hungerr Customer',
         branch: 'Borkheda, Kota',
         items: cart,
+        coupon: appliedCoupon ? appliedCoupon.code : null
       }),
     });
 
@@ -504,6 +536,7 @@ function submitUtrVerification() {
 
 function handlePaymentSuccess(orderId, utr, method = 'UPI') {
   cart = [];
+  appliedCoupon = null;
   saveCart();
   renderMenu();
   updateCartUI();
