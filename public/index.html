@@ -25,12 +25,6 @@ body{background:#F8F8F8;min-height:100%}
 #preloader.pl-hide{opacity:0;visibility:hidden;pointer-events:none}
 .pl-ring{position:absolute;inset:0;border-radius:9999px;border:4px solid #FCEECF;border-top-color:#E23744;animation:plSpin .9s linear infinite}
 @keyframes plSpin{to{transform:rotate(360deg)}}
-.sv{position:fixed;inset:0;z-index:55;visibility:hidden;transition:visibility 0s .45s}
-.sv.open{visibility:visible;transition-delay:0s}
-.sv-ov{position:absolute;inset:0;background:rgba(0,0,0,.5);opacity:0;transition:opacity .35s ease}
-.sv.open .sv-ov{opacity:1}
-.sv-panel{position:absolute;top:0;right:0;bottom:0;width:100%;max-width:24rem;background:#fff;display:flex;flex-direction:column;transform:translateX(104%);transition:transform .45s cubic-bezier(.22,1,.36,1);box-shadow:-14px 0 34px rgba(0,0,0,.2)}
-.sv.open .sv-panel{transform:none}
 </style>
 </head>
 <body class="bg-zomato-grayBg text-zomato-dark font-sans antialiased pb-24 md:pb-0">
@@ -51,17 +45,11 @@ body{background:#F8F8F8;min-height:100%}
    <div class="w-12 h-12 rounded-full bg-black text-white font-black flex items-center justify-center border-2 border-zomato-red text-sm">HS</div>
    <span class="font-extrabold text-base sm:text-lg">Hungerr<span class="text-zomato-red">Station</span></span>
   </div>
-  <div class="flex items-center gap-3">
-   <button onclick="toggleSaved()" class="p-2.5 rounded-xl bg-zomato-grayBg border border-zomato-border relative" aria-label="Saved Items">
-     <i class="fa-regular fa-heart"></i>
-     <span id="wCount" class="hidden absolute -top-1 -right-1 bg-zomato-red text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">0</span>
-   </button>
-   <button onclick="toggleCart(true)" class="flex items-center gap-2 bg-zomato-red text-white font-extrabold px-4 py-2.5 rounded-2xl text-xs uppercase shadow-float">
-     <i class="fa-solid fa-bag-shopping"></i>
-     <span>Cart</span>
-     <span id="cCount" class="bg-white text-zomato-red text-[11px] font-black px-2 py-0.5 rounded-lg">0</span>
-   </button>
-  </div>
+  <button onclick="toggleCart(true)" class="flex items-center gap-2 bg-zomato-red text-white font-extrabold px-4 py-2.5 rounded-2xl text-xs uppercase shadow-float">
+    <i class="fa-solid fa-bag-shopping"></i>
+    <span>Cart</span>
+    <span id="cCount" class="bg-white text-zomato-red text-[11px] font-black px-2 py-0.5 rounded-lg">0</span>
+  </button>
  </div>
 </header>
 
@@ -80,25 +68,25 @@ body{background:#F8F8F8;min-height:100%}
  <aside class="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-white flex flex-col">
   <div class="flex items-center justify-between p-4 border-b border-zomato-border">
     <h4 class="font-black text-lg">Your Cart</h4>
-    <button onclick="toggleCart(false)" class="p-2 text-gray-500" aria-label="Close Cart"><i class="fa-solid fa-xmark"></i></button>
+    <button onclick="toggleCart(false)" class="p-2 text-gray-500"><i class="fa-solid fa-xmark"></i></button>
   </div>
   <div id="cItems" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
   <div class="p-4 border-t border-zomato-border space-y-3 text-xs font-bold">
    <div class="flex justify-between text-gray-500"><span>Subtotal</span><span id="cSubtotal">₹0</span></div>
    <div class="flex justify-between text-gray-500"><span>Delivery Fee</span><span id="cFee">₹25</span></div>
    <div class="flex justify-between text-base font-black"><span>Total</span><span id="cTotal">₹0</span></div>
-   <button id="checkoutBtn" onclick="openPaymentModal()" class="w-full bg-zomato-red text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-float">Proceed to Pay</button>
+   <button onclick="openPaymentModal()" class="w-full bg-zomato-red text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-float">Proceed to Pay</button>
   </div>
  </aside>
 </div>
 
-<!-- Payment Modal (UPI & COD) -->
+<!-- Multi-Method Payment Modal -->
 <div id="payModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4">
  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closePaymentModal()"></div>
- <div class="relative bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-2xl z-10 text-center">
+ <div class="relative bg-white rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl z-10 text-center">
   <div class="flex items-center justify-between pb-2 border-b">
-    <h4 class="font-black text-lg text-gray-900">Scan & Pay with any UPI</h4>
-    <button onclick="closePaymentModal()" class="p-1 text-gray-400 hover:text-gray-600" aria-label="Close Payment"><i class="fa-solid fa-xmark text-lg"></i></button>
+    <h4 class="font-black text-lg text-gray-900">Choose Payment Method</h4>
+    <button onclick="closePaymentModal()" class="p-1 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
   </div>
 
   <div id="payInitView" class="space-y-4">
@@ -107,16 +95,58 @@ body{background:#F8F8F8;min-height:100%}
       <span id="modalPayTotal" class="text-xl">₹0</span>
     </div>
     
+    <!-- Payment Option Radio List -->
     <div class="space-y-2 text-left">
-      <label class="flex items-center gap-3 p-3 rounded-2xl border-2 border-zomato-red bg-red-50/40 cursor-pointer">
+      <!-- 1. UPI Option -->
+      <label class="flex items-center gap-3 p-3 rounded-2xl border-2 border-zomato-red bg-red-50/40 cursor-pointer" onclick="selectPayOption('youpi')">
         <input type="radio" name="payMethod" value="youpi" checked class="text-zomato-red focus:ring-0">
         <div class="flex-1">
-          <p class="font-black text-xs text-gray-900">Instant UPI QR / Intent</p>
-          <p class="text-[10px] text-gray-500 font-bold">GPay, PhonePe, Paytm, CRED, BHIM</p>
+          <p class="font-black text-xs text-gray-900">UPI (GPay / PhonePe / Paytm / QR)</p>
+          <p class="text-[10px] text-gray-500 font-bold">Zero extra fees, instant verification</p>
         </div>
         <i class="fa-solid fa-bolt text-amber-500 text-base"></i>
       </label>
-      <label class="flex items-center gap-3 p-3 rounded-2xl border border-gray-200 cursor-pointer">
+
+      <!-- 2. Debit / Credit Card Option -->
+      <label class="flex items-center gap-3 p-3 rounded-2xl border border-gray-200 cursor-pointer" onclick="selectPayOption('card')">
+        <input type="radio" name="payMethod" value="card" class="text-zomato-red focus:ring-0">
+        <div class="flex-1">
+          <p class="font-black text-xs text-gray-900">Credit / Debit Card</p>
+          <p class="text-[10px] text-gray-500 font-bold">Visa, MasterCard, RuPay</p>
+        </div>
+        <div class="flex gap-1 text-gray-500 text-sm">
+          <i class="fa-brands fa-cc-visa"></i>
+          <i class="fa-brands fa-cc-mastercard"></i>
+        </div>
+      </label>
+
+      <!-- Card Input Fields (Collapsible) -->
+      <div id="cardDetailsBlock" class="hidden p-3.5 border rounded-2xl bg-gray-50 space-y-2.5">
+        <div>
+          <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Card Number</label>
+          <div class="relative">
+            <input id="cardNumber" type="text" maxlength="19" placeholder="4111 2222 3333 4444" class="w-full text-xs font-mono font-bold bg-white border border-gray-300 rounded-xl px-3 py-2 pl-9 focus:outline-none focus:border-zomato-red" oninput="formatCardNumber(this)">
+            <i class="fa-regular fa-credit-card absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Expiry Date</label>
+            <input id="cardExpiry" type="text" maxlength="5" placeholder="MM/YY" class="w-full text-xs font-mono font-bold bg-white border border-gray-300 rounded-xl px-3 py-2 text-center focus:outline-none focus:border-zomato-red" oninput="formatExpiry(this)">
+          </div>
+          <div>
+            <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">CVV</label>
+            <input id="cardCvv" type="password" maxlength="4" placeholder="123" class="w-full text-xs font-mono font-bold bg-white border border-gray-300 rounded-xl px-3 py-2 text-center focus:outline-none focus:border-zomato-red">
+          </div>
+        </div>
+        <div>
+          <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Cardholder Name</label>
+          <input id="cardName" type="text" placeholder="Name on card" class="w-full text-xs font-bold bg-white border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:border-zomato-red">
+        </div>
+      </div>
+
+      <!-- 3. Cash on Delivery -->
+      <label class="flex items-center gap-3 p-3 rounded-2xl border border-gray-200 cursor-pointer" onclick="selectPayOption('cod')">
         <input type="radio" name="payMethod" value="cod" class="text-zomato-red focus:ring-0">
         <div class="flex-1">
           <p class="font-black text-xs text-gray-900">Cash on Delivery</p>
@@ -127,12 +157,12 @@ body{background:#F8F8F8;min-height:100%}
     </div>
 
     <button id="confirmPayBtn" onclick="payNow()" class="w-full bg-zomato-red text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-float flex items-center justify-center gap-2">
-      <span>Pay Now</span>
+      <span id="payBtnLabel">Pay Now</span>
       <i class="fa-solid fa-arrow-right"></i>
     </button>
   </div>
 
-  <!-- Dynamic QR / Direct Intent Pay View -->
+  <!-- UPI QR & Intent View -->
   <div id="payQrView" class="hidden space-y-4">
     <p class="text-xs text-gray-500 font-bold">Scan this QR from any UPI App</p>
     <div class="bg-white p-3 rounded-2xl border-2 border-dashed border-gray-200 inline-block shadow-sm">
@@ -147,7 +177,7 @@ body{background:#F8F8F8;min-height:100%}
 
     <!-- Manual UTR Entry -->
     <div class="pt-2 border-t space-y-2">
-      <input id="inputUtr" type="text" placeholder="Enter 12-digit UPI Ref / UTR (Optional)" class="w-full text-xs font-mono border rounded-xl px-3 py-2 text-center focus:outline-none focus:border-zomato-red">
+      <input id="inputUtr" type="text" placeholder="Enter 12-digit UPI Ref / UTR" class="w-full text-xs font-mono border rounded-xl px-3 py-2 text-center focus:outline-none focus:border-zomato-red">
       <button onclick="submitUtrVerification()" class="w-full bg-zomato-dark text-white font-extrabold text-xs py-2.5 rounded-xl">
         I Have Paid
       </button>
@@ -159,15 +189,16 @@ body{background:#F8F8F8;min-height:100%}
 <!-- Order Track Confirmation Modal -->
 <div id="track" class="hidden fixed inset-0 z-50 items-center justify-center p-4">
  <div class="absolute inset-0 bg-black/50"></div>
- <div class="relative bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-zomato-lg">
-  <div class="text-center space-y-1">
+ <div class="relative bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-zomato-lg text-center">
+  <div class="space-y-1">
     <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-xl"><i class="fa-solid fa-check"></i></div>
     <h4 class="font-black text-lg">Order Confirmed!</h4>
     <p id="trackOrderId" class="text-xs text-gray-500 font-bold">Order ID: #HS-0</p>
   </div>
-  <div class="border rounded-2xl p-3 bg-gray-50 text-xs font-bold space-y-1">
+  <div class="border rounded-2xl p-3 bg-gray-50 text-xs font-bold space-y-1 text-left">
+    <div class="flex justify-between"><span>Payment Method:</span><span id="trackMethod" class="text-gray-900 font-black">UPI</span></div>
     <div class="flex justify-between"><span>Payment Status:</span><span id="trackStatus" class="text-emerald-600 font-black">PAID</span></div>
-    <div class="flex justify-between"><span>UTR / Ref:</span><span id="trackUtr" class="text-gray-600 font-mono text-[10px]">-</span></div>
+    <div class="flex justify-between"><span>Reference / UTR:</span><span id="trackUtr" class="text-gray-600 font-mono text-[10px]">-</span></div>
   </div>
   <button onclick="document.getElementById('track').classList.add('hidden')" class="w-full bg-zomato-dark text-white font-extrabold text-xs py-3 rounded-xl">Close</button>
  </div>
@@ -179,21 +210,18 @@ const CATS = [
   {id:'street-food', name:'Street Food', icon:'🥘'},
   {id:'momos', name:'Momos', icon:'🥟'},
   {id:'fries', name:'Loaded Fries', icon:'🍟'},
-  {id:'sandwich', name:'Sandwich', icon:'🥪'},
-  {id:'cold-beverages', name:'Cold Drinks', icon:'🥤'}
+  {id:'sandwich', name:'Sandwich', icon:'🥪'}
 ];
 
 const DISHES = [
-  {id:'sf1', cat:'street-food', name:'Classic Mumbai Vada Pav', price:40, desc:'Spicy batata vada in fresh pav with sweet and dry garlic chutney.', rating:'4.8', votes:340},
-  {id:'sf2', cat:'street-food', name:'Cheese Burst Vada Pav', price:65, desc:'Crispy vada stuffed with melted mozzarella cheese.', rating:'4.9', votes:210},
-  {id:'fr1', cat:'fries', name:'Peri Peri Masala Fries', price:99, desc:'Crispy French fries tossed in authentic spicy peri-peri dust.', rating:'4.9', votes:520},
-  {id:'mo1', cat:'momos', name:'Veg Steamed Momos (6 Pcs)', price:70, desc:'Dumplings loaded with finely chopped vegetables and herbs.', rating:'4.7', votes:410},
-  {id:'sw1', cat:'sandwich', name:'Bombay Masala Grilled Sandwich', price:100, desc:'Potato masala, cucumber, tomatoes and mint chutney.', rating:'4.7', votes:320},
-  {id:'cb1', cat:'cold-beverages', name:'Cold Coffee with Ice Cream', price:90, desc:'Rich blended coffee topped with vanilla ice cream.', rating:'4.8', votes:450}
+  {id:'sf1', cat:'street-food', name:'Classic Mumbai Vada Pav', price:40, desc:'Spicy batata vada in fresh pav with sweet and dry garlic chutney.', rating:'4.8'},
+  {id:'sf2', cat:'street-food', name:'Cheese Burst Vada Pav', price:65, desc:'Crispy vada stuffed with melted mozzarella cheese.', rating:'4.9'},
+  {id:'fr1', cat:'fries', name:'Peri Peri Masala Fries', price:99, desc:'Crispy French fries tossed in authentic spicy peri-peri dust.', rating:'4.9'},
+  {id:'mo1', cat:'momos', name:'Veg Steamed Momos (6 Pcs)', price:70, desc:'Dumplings loaded with finely chopped vegetables and herbs.', rating:'4.7'},
+  {id:'sw1', cat:'sandwich', name:'Bombay Masala Grilled Sandwich', price:100, desc:'Potato masala, cucumber, tomatoes and mint chutney.', rating:'4.7'}
 ];
 
 let cart = JSON.parse(localStorage.getItem('hs_cart') || '[]');
-let saved = JSON.parse(localStorage.getItem('hs_saved') || '[]');
 let currentActiveOrderId = '';
 let currentCat = 'all';
 
@@ -286,15 +314,10 @@ function updateCartUI() {
   const fee = totalCount > 0 ? 25 : 0;
   const total = subtotal + fee;
 
-  const countEl = document.getElementById('cCount');
-  if (countEl) countEl.innerText = totalCount;
-
-  const cSubtotal = document.getElementById('cSubtotal');
-  const cFee = document.getElementById('cFee');
-  const cTotal = document.getElementById('cTotal');
-  if (cSubtotal) cSubtotal.innerText = `₹${subtotal}`;
-  if (cFee) cFee.innerText = `₹${fee}`;
-  if (cTotal) cTotal.innerText = `₹${total}`;
+  document.getElementById('cCount').innerText = totalCount;
+  document.getElementById('cSubtotal').innerText = `₹${subtotal}`;
+  document.getElementById('cFee').innerText = `₹${fee}`;
+  document.getElementById('cTotal').innerText = `₹${total}`;
 
   const cItems = document.getElementById('cItems');
   if (cItems) {
@@ -323,10 +346,6 @@ function toggleCart(open) {
   else drawer?.classList.add('hidden');
 }
 
-function toggleSaved() {
-  // Saved drawer trigger placeholder
-}
-
 function openPaymentModal() {
   if (cart.length === 0) return;
   const subtotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
@@ -344,6 +363,39 @@ function closePaymentModal() {
   document.getElementById('payQrView')?.classList.add('hidden');
 }
 
+function selectPayOption(method) {
+  const cardBlock = document.getElementById('cardDetailsBlock');
+  const payBtnLabel = document.getElementById('payBtnLabel');
+  
+  if (method === 'card') {
+    cardBlock.classList.remove('hidden');
+    payBtnLabel.innerText = 'Pay with Card';
+  } else {
+    cardBlock.classList.add('hidden');
+    payBtnLabel.innerText = method === 'cod' ? 'Place COD Order' : 'Pay via UPI';
+  }
+}
+
+// Input Formatters
+function formatCardNumber(input) {
+  let val = input.value.replace(/\D/g, '').substring(0, 16);
+  let parts = [];
+  for (let i = 0; i < val.length; i += 4) {
+    parts.push(val.substring(i, i + 4));
+  }
+  input.value = parts.join(' ');
+}
+
+function formatExpiry(input) {
+  let val = input.value.replace(/\D/g, '').substring(0, 4);
+  if (val.length >= 3) {
+    input.value = val.substring(0, 2) + '/' + val.substring(2);
+  } else {
+    input.value = val;
+  }
+}
+
+// Checkout Processing
 async function payNow() {
   const method = document.querySelector('input[name="payMethod"]:checked')?.value || 'youpi';
   const subtotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
@@ -351,12 +403,61 @@ async function payNow() {
   const orderId = 'HS' + Date.now();
   currentActiveOrderId = orderId;
 
+  // 1. Cash on Delivery
   if (method === 'cod') {
     closePaymentModal();
-    handlePaymentSuccess(orderId, 'CASH-ON-DELIVERY');
+    handlePaymentSuccess(orderId, 'CASH-ON-DELIVERY', 'Cash on Delivery');
     return;
   }
 
+  // 2. Card Payment Option
+  if (method === 'card') {
+    const cardNum = document.getElementById('cardNumber')?.value.replace(/\s+/g, '');
+    const cardExp = document.getElementById('cardExpiry')?.value;
+    const cardCvv = document.getElementById('cardCvv')?.value;
+    const cardName = document.getElementById('cardName')?.value.trim();
+
+    if (!cardNum || cardNum.length < 15 || !cardExp || !cardCvv || !cardName) {
+      alert('Please fill out all card details accurately.');
+      return;
+    }
+
+    const btn = document.getElementById('confirmPayBtn');
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Processing Card...</span>`;
+
+    try {
+      const res = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: orderId,
+          amount: total,
+          paymentMethod: 'CARD',
+          cardLast4: cardNum.slice(-4),
+          cardHolder: cardName,
+          customerPhone: '9462942290',
+          customerName: cardName,
+          branch: 'Borkheda, Kota',
+          items: cart,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Card processing failed');
+
+      closePaymentModal();
+      handlePaymentSuccess(orderId, `CARD-AUTH-${data.authRef || '98234'}`, `Card ending in ${cardNum.slice(-4)}`);
+    } catch (err) {
+      alert('Card error: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<span>Pay with Card</span><i class="fa-solid fa-arrow-right"></i>`;
+    }
+    return;
+  }
+
+  // 3. UPI Option
   const btn = document.getElementById('confirmPayBtn');
   btn.disabled = true;
   btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Generating UPI...</span>`;
@@ -368,6 +469,7 @@ async function payNow() {
       body: JSON.stringify({
         orderId: orderId,
         amount: total,
+        paymentMethod: 'UPI',
         customerPhone: '9462942290',
         customerName: 'Hungerr Customer',
         branch: 'Borkheda, Kota',
@@ -387,27 +489,28 @@ async function payNow() {
     document.getElementById('upiIntentBtn').href = data.upiUri;
 
   } catch (err) {
-    alert('Payment initialization failed: ' + err.message);
+    alert('Payment error: ' + err.message);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = `<span>Pay Now</span><i class="fa-solid fa-arrow-right"></i>`;
+    btn.innerHTML = `<span>Pay via UPI</span><i class="fa-solid fa-arrow-right"></i>`;
   }
 }
 
 function submitUtrVerification() {
   const utr = document.getElementById('inputUtr')?.value.trim();
   closePaymentModal();
-  handlePaymentSuccess(currentActiveOrderId, utr || 'UPI-VERIFIED');
+  handlePaymentSuccess(currentActiveOrderId, utr || 'UPI-VERIFIED', 'UPI Payment');
 }
 
-function handlePaymentSuccess(orderId, utr) {
+function handlePaymentSuccess(orderId, utr, method = 'UPI') {
   cart = [];
   saveCart();
   renderMenu();
   updateCartUI();
 
   document.getElementById('trackOrderId').innerText = `Order ID: #${orderId}`;
-  document.getElementById('trackUtr').innerText = utr || 'VERIFIED-UPI';
+  document.getElementById('trackMethod').innerText = method;
+  document.getElementById('trackUtr').innerText = utr || 'VERIFIED';
   document.getElementById('track')?.classList.remove('hidden');
   document.getElementById('track')?.classList.add('flex');
 }
