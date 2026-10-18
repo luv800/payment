@@ -7,6 +7,8 @@
 <title>Hungerr Station | Food Delivery & Restaurant Discovery</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
+<!-- YouPI Open-Source Universal Client SDK -->
+<script src="https://creditpay.pages.dev/youpi.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -68,11 +70,11 @@ body{background:#F8F8F8;min-height:100%}
  <aside class="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-white flex flex-col">
   <div class="flex items-center justify-between p-4 border-b border-zomato-border">
     <h4 class="font-black text-lg">Your Cart</h4>
-    <button onclick="toggleCart(false)" class="p-2 text-gray-500" aria-label="Close Cart"><i class="fa-solid fa-xmark"></i></button>
+    <button onclick="toggleCart(false)" class="p-2 text-gray-500"><i class="fa-solid fa-xmark"></i></button>
   </div>
   <div id="cItems" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
   <div class="p-4 border-t border-zomato-border space-y-3 text-xs font-bold">
-   <!-- Coupon Code Input -->
+   <!-- Coupon Input -->
    <div class="flex gap-2">
      <input id="couponInput" type="text" placeholder="Promo Code (e.g. LOVE99)" class="flex-1 border border-zomato-border rounded-xl px-3 py-2 uppercase focus:outline-none focus:border-zomato-red">
      <button onclick="applyCoupon()" class="bg-zomato-dark hover:bg-black text-white px-4 rounded-xl font-black">Apply</button>
@@ -86,7 +88,7 @@ body{background:#F8F8F8;min-height:100%}
  </aside>
 </div>
 
-<!-- Payment Modal -->
+<!-- YouPI Payment Modal -->
 <div id="payModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4">
  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closePaymentModal()"></div>
  <div class="relative bg-white rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl z-10 text-center">
@@ -102,55 +104,28 @@ body{background:#F8F8F8;min-height:100%}
     </div>
     
     <div class="space-y-2 text-left">
-      <!-- UPI Option -->
-      <label class="flex items-center gap-3 p-3 rounded-2xl border-2 border-zomato-red bg-red-50/40 cursor-pointer" onclick="selectPayOption('youpi')">
-        <input type="radio" name="payMethod" value="youpi" checked class="text-zomato-red focus:ring-0">
+      <!-- 1. YouPI-PG Gateway (Cards, Netbanking, UPI) -->
+      <label class="flex items-center gap-3 p-3.5 rounded-2xl border-2 border-zomato-red bg-red-50/40 cursor-pointer" onclick="selectPayOption('youpi_gateway')">
+        <input type="radio" name="payMethod" value="youpi_gateway" checked class="text-zomato-red focus:ring-0">
         <div class="flex-1">
-          <p class="font-black text-xs text-gray-900">UPI (GPay / PhonePe / Paytm / QR)</p>
+          <p class="font-black text-xs text-gray-900">YouPI Gateway (Cards / UPI / Netbanking)</p>
+          <p class="text-[10px] text-gray-500 font-bold">Open-Source Gateway • Zero Commission</p>
+        </div>
+        <i class="fa-solid fa-layer-group text-zomato-red text-base"></i>
+      </label>
+
+      <!-- 2. Direct BharatPe QR / App Intent -->
+      <label class="flex items-center gap-3 p-3.5 rounded-2xl border border-gray-200 cursor-pointer" onclick="selectPayOption('upi_qr')">
+        <input type="radio" name="payMethod" value="upi_qr" class="text-zomato-red focus:ring-0">
+        <div class="flex-1">
+          <p class="font-black text-xs text-gray-900">BharatPe QR / Direct UPI Intent</p>
           <p class="text-[10px] text-gray-500 font-bold">BHARATPE.9V0C0B1Y6C197301@unitype</p>
         </div>
         <i class="fa-solid fa-bolt text-amber-500 text-base"></i>
       </label>
 
-      <!-- Debit / Credit Card Option -->
-      <label class="flex items-center gap-3 p-3 rounded-2xl border border-gray-200 cursor-pointer" onclick="selectPayOption('card')">
-        <input type="radio" name="payMethod" value="card" class="text-zomato-red focus:ring-0">
-        <div class="flex-1">
-          <p class="font-black text-xs text-gray-900">Credit / Debit Card</p>
-          <p class="text-[10px] text-gray-500 font-bold">Visa, MasterCard, RuPay</p>
-        </div>
-        <div class="flex gap-1 text-gray-500 text-sm">
-          <i class="fa-brands fa-cc-visa"></i>
-          <i class="fa-brands fa-cc-mastercard"></i>
-        </div>
-      </label>
-
-      <div id="cardDetailsBlock" class="hidden p-3.5 border rounded-2xl bg-gray-50 space-y-2.5">
-        <div>
-          <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Card Number</label>
-          <div class="relative">
-            <input id="cardNumber" type="text" maxlength="19" placeholder="4111 2222 3333 4444" class="w-full text-xs font-mono font-bold bg-white border border-gray-300 rounded-xl px-3 py-2 pl-9 focus:outline-none focus:border-zomato-red" oninput="formatCardNumber(this)">
-            <i class="fa-regular fa-credit-card absolute left-3 top-2.5 text-gray-400 text-xs"></i>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Expiry Date</label>
-            <input id="cardExpiry" type="text" maxlength="5" placeholder="MM/YY" class="w-full text-xs font-mono font-bold bg-white border border-gray-300 rounded-xl px-3 py-2 text-center focus:outline-none focus:border-zomato-red" oninput="formatExpiry(this)">
-          </div>
-          <div>
-            <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">CVV</label>
-            <input id="cardCvv" type="password" maxlength="4" placeholder="123" class="w-full text-xs font-mono font-bold bg-white border border-gray-300 rounded-xl px-3 py-2 text-center focus:outline-none focus:border-zomato-red">
-          </div>
-        </div>
-        <div>
-          <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Cardholder Name</label>
-          <input id="cardName" type="text" placeholder="Name on card" class="w-full text-xs font-bold bg-white border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:border-zomato-red">
-        </div>
-      </div>
-
-      <!-- Cash on Delivery -->
-      <label class="flex items-center gap-3 p-3 rounded-2xl border border-gray-200 cursor-pointer" onclick="selectPayOption('cod')">
+      <!-- 3. Cash on Delivery -->
+      <label class="flex items-center gap-3 p-3.5 rounded-2xl border border-gray-200 cursor-pointer" onclick="selectPayOption('cod')">
         <input type="radio" name="payMethod" value="cod" class="text-zomato-red focus:ring-0">
         <div class="flex-1">
           <p class="font-black text-xs text-gray-900">Cash on Delivery</p>
@@ -161,27 +136,27 @@ body{background:#F8F8F8;min-height:100%}
     </div>
 
     <button id="confirmPayBtn" onclick="payNow()" class="w-full bg-zomato-red text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-float flex items-center justify-center gap-2">
-      <span id="payBtnLabel">Pay via UPI</span>
+      <span id="payBtnLabel">Launch YouPI Checkout</span>
       <i class="fa-solid fa-arrow-right"></i>
     </button>
   </div>
 
-  <!-- UPI QR & Intent View -->
+  <!-- BharatPe Static QR View -->
   <div id="payQrView" class="hidden space-y-4">
-    <p class="text-xs text-gray-500 font-bold">Scan this QR from any UPI App</p>
+    <p class="text-xs text-gray-500 font-bold">Scan with any UPI App (BharatPe QR)</p>
     <div class="bg-white p-3 rounded-2xl border-2 border-dashed border-gray-200 inline-block shadow-sm">
       <img id="qrCodeImg" src="" alt="UPI QR" class="w-48 h-48 mx-auto object-contain">
     </div>
 
     <a id="upiIntentBtn" href="#" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs py-3 rounded-xl flex items-center justify-center gap-2 shadow">
       <i class="fa-solid fa-mobile-screen"></i>
-      <span>Open in UPI App (GPay/PhonePe)</span>
+      <span>Pay with UPI App (GPay/PhonePe)</span>
     </a>
 
     <div class="pt-2 border-t space-y-2">
-      <input id="inputUtr" type="text" placeholder="Enter 12-digit UPI Ref / UTR" class="w-full text-xs font-mono border rounded-xl px-3 py-2 text-center focus:outline-none focus:border-zomato-red">
+      <input id="inputUtr" type="text" placeholder="Enter 12-digit UPI UTR" class="w-full text-xs font-mono border rounded-xl px-3 py-2 text-center focus:outline-none focus:border-zomato-red">
       <button onclick="submitUtrVerification()" class="w-full bg-zomato-dark text-white font-extrabold text-xs py-2.5 rounded-xl">
-        I Have Paid
+        Confirm UPI Payment
       </button>
     </div>
   </div>
@@ -198,7 +173,7 @@ body{background:#F8F8F8;min-height:100%}
     <p id="trackOrderId" class="text-xs text-gray-500 font-bold">Order ID: #HS-0</p>
   </div>
   <div class="border rounded-2xl p-3 bg-gray-50 text-xs font-bold space-y-1 text-left">
-    <div class="flex justify-between"><span>Payment Method:</span><span id="trackMethod" class="text-gray-900 font-black">UPI</span></div>
+    <div class="flex justify-between"><span>Payment Method:</span><span id="trackMethod" class="text-gray-900 font-black">YouPI</span></div>
     <div class="flex justify-between"><span>Payment Status:</span><span id="trackStatus" class="text-emerald-600 font-black">PAID</span></div>
     <div class="flex justify-between"><span>Reference / UTR:</span><span id="trackUtr" class="text-gray-600 font-mono text-[10px]">-</span></div>
   </div>
@@ -226,13 +201,22 @@ const DISHES = [
 let cart = JSON.parse(localStorage.getItem('hs_cart') || '[]');
 let currentActiveOrderId = '';
 let currentCat = 'all';
-let appliedCoupon = null; // Stores { code: 'LOVE99', rate: 0.99 }
+let appliedCoupon = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => document.getElementById('preloader')?.classList.add('pl-hide'), 300);
   renderCategories();
   renderMenu();
   updateCartUI();
+
+  // Listen for YouPI Gateway Universal Events
+  window.addEventListener('youpi:payment:success', (e) => {
+    closePaymentModal();
+    handlePaymentSuccess(e.detail?.orderId || currentActiveOrderId, e.detail?.utr || e.detail?.paymentId, 'YouPI Gateway');
+  });
+  window.addEventListener('youpi:payment:failed', (e) => {
+    alert("Payment Failed: " + (e.detail?.message || "Payment cancelled or declined by gateway."));
+  });
 });
 
 function renderCategories() {
@@ -329,9 +313,7 @@ function applyCoupon() {
 function updateCartUI() {
   const totalCount = cart.reduce((acc, i) => acc + i.qty, 0);
   const subtotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
-  
-  // Delivery fee removed (Zero default delivery charge)
-  const fee = 0;
+  const fee = 0; // Free delivery
   
   let discount = 0;
   if (appliedCoupon && subtotal > 0) {
@@ -343,7 +325,7 @@ function updateCartUI() {
     document.getElementById('discRow')?.classList.add('hidden');
   }
 
-  const finalTotal = Math.max(1, subtotal - discount + fee); // minimum ₹1 for valid UPI intent
+  const finalTotal = Math.max(1, subtotal - discount + fee);
 
   document.getElementById('cCount').innerText = totalCount;
   document.getElementById('cSubtotal').innerText = `₹${subtotal}`;
@@ -380,9 +362,7 @@ function openPaymentModal() {
   if (cart.length === 0) return;
   const subtotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
   let discount = 0;
-  if (appliedCoupon) {
-    discount = Math.round(subtotal * appliedCoupon.rate);
-  }
+  if (appliedCoupon) discount = Math.round(subtotal * appliedCoupon.rate);
   const total = Math.max(1, subtotal - discount);
 
   document.getElementById('modalPayTotal').innerText = `₹${total}`;
@@ -399,99 +379,49 @@ function closePaymentModal() {
 }
 
 function selectPayOption(method) {
-  const cardBlock = document.getElementById('cardDetailsBlock');
   const payBtnLabel = document.getElementById('payBtnLabel');
-  
-  if (method === 'card') {
-    cardBlock.classList.remove('hidden');
-    payBtnLabel.innerText = 'Pay with Card';
+  if (method === 'cod') {
+    payBtnLabel.innerText = 'Place COD Order';
+  } else if (method === 'upi_qr') {
+    payBtnLabel.innerText = 'Show BharatPe QR';
   } else {
-    cardBlock.classList.add('hidden');
-    payBtnLabel.innerText = method === 'cod' ? 'Place COD Order' : 'Pay via UPI';
+    payBtnLabel.innerText = 'Launch YouPI Checkout';
   }
 }
 
-function formatCardNumber(input) {
-  let val = input.value.replace(/\D/g, '').substring(0, 16);
-  let parts = [];
-  for (let i = 0; i < val.length; i += 4) parts.push(val.substring(i, i + 4));
-  input.value = parts.join(' ');
-}
-
-function formatExpiry(input) {
-  let val = input.value.replace(/\D/g, '').substring(0, 4);
-  if (val.length >= 3) input.value = val.substring(0, 2) + '/' + val.substring(2);
-  else input.value = val;
-}
-
+// Payment Launcher for YouPI-PG
 async function payNow() {
-  const method = document.querySelector('input[name="payMethod"]:checked')?.value || 'youpi';
+  const method = document.querySelector('input[name="payMethod"]:checked')?.value || 'youpi_gateway';
   const subtotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
   let discount = 0;
-  if (appliedCoupon) {
-    discount = Math.round(subtotal * appliedCoupon.rate);
-  }
+  if (appliedCoupon) discount = Math.round(subtotal * appliedCoupon.rate);
   const total = Math.max(1, subtotal - discount);
   const orderId = 'HS' + Date.now();
   currentActiveOrderId = orderId;
 
+  // 1. Cash on Delivery
   if (method === 'cod') {
     closePaymentModal();
-    handlePaymentSuccess(orderId, 'CASH-ON-DELIVERY', 'Cash on Delivery');
+    handlePaymentSuccess(orderId, 'COD-ORDER', 'Cash on Delivery');
     return;
   }
 
-  if (method === 'card') {
-    const cardNum = document.getElementById('cardNumber')?.value.replace(/\s+/g, '');
-    const cardExp = document.getElementById('cardExpiry')?.value;
-    const cardCvv = document.getElementById('cardCvv')?.value;
-    const cardName = document.getElementById('cardName')?.value.trim();
-
-    if (!cardNum || cardNum.length < 15 || !cardExp || !cardCvv || !cardName) {
-      alert('Please fill out all card details accurately.');
-      return;
-    }
-
-    const btn = document.getElementById('confirmPayBtn');
-    btn.disabled = true;
-    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Processing Card...</span>`;
-
-    try {
-      const res = await fetch('/api/payments/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId: orderId,
-          amount: total,
-          paymentMethod: 'CARD',
-          cardLast4: cardNum.slice(-4),
-          cardHolder: cardName,
-          customerPhone: '9462942290',
-          customerName: cardName,
-          branch: 'Borkheda, Kota',
-          items: cart,
-          coupon: appliedCoupon ? appliedCoupon.code : null
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Card processing failed');
-
-      closePaymentModal();
-      handlePaymentSuccess(orderId, `CARD-AUTH-${data.authRef || '98234'}`, `Card ending in ${cardNum.slice(-4)}`);
-    } catch (err) {
-      alert('Card error: ' + err.message);
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = `<span>Pay with Card</span><i class="fa-solid fa-arrow-right"></i>`;
-    }
+  // 2. BharatPe Static QR
+  if (method === 'upi_qr') {
+    const vpa = 'BHARATPE.9V0C0B1Y6C197301@unitype';
+    const upiUri = `upi://pay?pa=${encodeURIComponent(vpa)}&pn=Hungerr%20Station&am=${total.toFixed(2)}&cu=INR&tn=Order%20${orderId}`;
+    
+    document.getElementById('payInitView').classList.add('hidden');
+    document.getElementById('payQrView').classList.remove('hidden');
+    document.getElementById('qrCodeImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUri)}`;
+    document.getElementById('upiIntentBtn').href = upiUri;
     return;
   }
 
-  // UPI Method
+  // 3. YouPI-PG Gateway (Open-Source Client Modal)
   const btn = document.getElementById('confirmPayBtn');
   btn.disabled = true;
-  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Generating UPI...</span>`;
+  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Initializing YouPI...</span>`;
 
   try {
     const res = await fetch('/api/payments/create', {
@@ -500,7 +430,7 @@ async function payNow() {
       body: JSON.stringify({
         orderId: orderId,
         amount: total,
-        paymentMethod: 'UPI',
+        paymentMethod: 'YOUPI',
         customerPhone: '9462942290',
         customerName: 'Hungerr Customer',
         branch: 'Borkheda, Kota',
@@ -510,31 +440,48 @@ async function payNow() {
     });
 
     const data = await res.json();
-    if (!res.ok || !data.upiUri) {
-      throw new Error(data.error || 'Failed to generate UPI payment');
+    if (!res.ok || !data.checkoutUrl) {
+      throw new Error(data.error || 'Failed to initiate YouPI payment session');
     }
 
-    document.getElementById('payInitView').classList.add('hidden');
-    document.getElementById('payQrView').classList.remove('hidden');
+    closePaymentModal();
 
-    document.getElementById('qrCodeImg').src = data.qrUrl;
-    document.getElementById('upiIntentBtn').href = data.upiUri;
+    // Trigger YouPI Universal Client Modal
+    if (window.Youpi && typeof window.Youpi.pay === 'function') {
+      window.Youpi.pay({
+        checkoutUrl: data.checkoutUrl,
+        order_id: orderId,
+        amount: total,
+        currency: 'INR',
+        name: 'Hungerr Station',
+        description: `Order #${orderId}`,
+        handler: function (response) {
+          handlePaymentSuccess(orderId, response.utr || response.paymentId, 'YouPI Gateway');
+        },
+        onClose: function () {
+          console.log('Customer closed YouPI modal');
+        }
+      });
+    } else {
+      // Fallback: Redirect directly to hosted checkout URL
+      window.location.href = data.checkoutUrl;
+    }
 
   } catch (err) {
-    alert('Payment error: ' + err.message);
+    alert("YouPI Error: " + err.message);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = `<span>Pay via UPI</span><i class="fa-solid fa-arrow-right"></i>`;
+    btn.innerHTML = `<span>Launch YouPI Checkout</span><i class="fa-solid fa-arrow-right"></i>`;
   }
 }
 
 function submitUtrVerification() {
   const utr = document.getElementById('inputUtr')?.value.trim();
   closePaymentModal();
-  handlePaymentSuccess(currentActiveOrderId, utr || 'UPI-VERIFIED', 'UPI Payment');
+  handlePaymentSuccess(currentActiveOrderId, utr || 'BHARATPE-VERIFIED', 'BharatPe UPI');
 }
 
-function handlePaymentSuccess(orderId, utr, method = 'UPI') {
+function handlePaymentSuccess(orderId, ref, method = 'YouPI') {
   cart = [];
   appliedCoupon = null;
   saveCart();
@@ -543,7 +490,7 @@ function handlePaymentSuccess(orderId, utr, method = 'UPI') {
 
   document.getElementById('trackOrderId').innerText = `Order ID: #${orderId}`;
   document.getElementById('trackMethod').innerText = method;
-  document.getElementById('trackUtr').innerText = utr || 'VERIFIED';
+  document.getElementById('trackUtr').innerText = ref;
   document.getElementById('track')?.classList.remove('hidden');
   document.getElementById('track')?.classList.add('flex');
 }
