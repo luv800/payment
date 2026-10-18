@@ -1,36 +1,13 @@
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
-
- <!-- If testing locally with Cloudflare Pages, use the full local port or your tunnel URL -->
-<script src="http://localhost:7000/sdk/youpi.js"></script>
- <button id="pay-button" style="background:#2563eb; color:white; padding:12px 24px; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
-  Pay ₹1.00 with UPI
-</button>
-
-<script>
-  document.getElementById('pay-button').addEventListener('click', function () {
-    if (window.Youpi) {
-      window.Youpi.pay({
-        amount: 1.00,
-        currency: 'INR',
-        name: 'CreditPay',
-        description: 'Order Demo Checkout',
-        handler: function (response) {
-          alert('Payment Recorded! Reference / UTR: ' + response.utr);
-        }
-      });
-    } else {
-      alert('YouPI SDK not loaded. Ensure your payment gateway server is running.');
-    }
-  });
-</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
 <title>Hungerr Station | Food Delivery & Restaurant Discovery</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -110,7 +87,7 @@ body{background:#F8F8F8;min-height:100%}
  </aside>
 </div>
 
-<!-- Payment Modal with UPI, Card, and COD -->
+<!-- Payment Modal with UPI and COD -->
 <div id="payModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4">
  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closePaymentModal()"></div>
  <div class="relative bg-white rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl z-10 text-center">
@@ -126,6 +103,11 @@ body{background:#F8F8F8;min-height:100%}
     </div>
     
     <div class="space-y-2 text-left">
+      <input id="custName" type="text" maxlength="60" placeholder="Your name" autocomplete="name" class="w-full text-xs font-bold border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:border-zomato-red">
+      <input id="custPhone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel-national" class="w-full text-xs font-bold border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:border-zomato-red">
+    </div>
+
+    <div class="space-y-2 text-left">
       <!-- 1. Instant UPI Gateway -->
       <label class="flex items-center gap-3 p-3.5 rounded-2xl border-2 border-zomato-red bg-red-50/40 cursor-pointer" onclick="selectPayOption('youpi')">
         <input type="radio" name="payMethod" value="youpi" checked class="text-zomato-red focus:ring-0">
@@ -136,45 +118,7 @@ body{background:#F8F8F8;min-height:100%}
         <i class="fa-solid fa-bolt text-amber-500 text-base"></i>
       </label>
 
-      <!-- 2. Debit / Credit Card Option -->
-      <label class="flex items-center gap-3 p-3.5 rounded-2xl border border-gray-200 cursor-pointer" onclick="selectPayOption('card')">
-        <input type="radio" name="payMethod" value="card" class="text-zomato-red focus:ring-0">
-        <div class="flex-1">
-          <p class="font-black text-xs text-gray-900">Credit / Debit Card</p>
-          <p class="text-[10px] text-gray-500 font-bold">Visa, MasterCard, RuPay</p>
-        </div>
-        <div class="flex gap-1 text-gray-500 text-sm">
-          <i class="fa-brands fa-cc-visa text-blue-600"></i>
-          <i class="fa-brands fa-cc-mastercard text-red-500"></i>
-        </div>
-      </label>
-
-      <!-- Card Input Form -->
-      <div id="cardDetailsBlock" class="hidden p-3.5 border rounded-2xl bg-gray-50 space-y-2.5">
-        <div>
-          <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Card Number</label>
-          <div class="relative">
-            <input id="cardNumber" type="text" maxlength="19" placeholder="4213 8900 5434 3016" class="w-full text-xs font-mono font-bold bg-white border border-gray-300 rounded-xl px-3 py-2 pl-9 focus:outline-none focus:border-zomato-red" oninput="formatCardNumber(this)">
-            <i class="fa-regular fa-credit-card absolute left-3 top-2.5 text-gray-400 text-xs"></i>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Expiry Date</label>
-            <input id="cardExpiry" type="text" maxlength="5" placeholder="12/27" class="w-full text-xs font-mono font-bold bg-white border border-gray-300 rounded-xl px-3 py-2 text-center focus:outline-none focus:border-zomato-red" oninput="formatExpiry(this)">
-          </div>
-          <div>
-            <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">CVV</label>
-            <input id="cardCvv" type="password" maxlength="4" placeholder="***" class="w-full text-xs font-mono font-bold bg-white border border-gray-300 rounded-xl px-3 py-2 text-center focus:outline-none focus:border-zomato-red">
-          </div>
-        </div>
-        <div>
-          <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Cardholder Name</label>
-          <input id="cardName" type="text" placeholder="Cardholder name" class="w-full text-xs font-bold bg-white border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:border-zomato-red">
-        </div>
-      </div>
-
-      <!-- 3. Cash on Delivery -->
+      <!-- 2. Cash on Delivery -->
       <label class="flex items-center gap-3 p-3.5 rounded-2xl border border-gray-200 cursor-pointer" onclick="selectPayOption('cod')">
         <input type="radio" name="payMethod" value="cod" class="text-zomato-red focus:ring-0">
         <div class="flex-1">
@@ -193,6 +137,11 @@ body{background:#F8F8F8;min-height:100%}
 
   <!-- Dynamic UPI QR & App Intent View -->
   <div id="payQrView" class="hidden space-y-4">
+    <div class="bg-red-50 rounded-2xl p-3 space-y-0.5">
+      <p class="text-[10px] font-black uppercase text-gray-500">Pay exactly</p>
+      <p id="payExactAmt" class="text-2xl font-black text-zomato-red">₹0.00</p>
+      <p class="text-[10px] text-gray-500 font-bold">The extra paise (if any) let us confirm your payment automatically.</p>
+    </div>
     <p class="text-xs text-gray-500 font-bold">Scan with any UPI App (GPay / PhonePe / Paytm)</p>
     <div class="bg-white p-3 rounded-2xl border-2 border-dashed border-gray-200 inline-block shadow-sm">
       <img id="qrCodeImg" src="" alt="UPI QR" class="w-48 h-48 mx-auto object-contain">
@@ -204,12 +153,10 @@ body{background:#F8F8F8;min-height:100%}
       <span>Pay with UPI App (GPay/PhonePe)</span>
     </a>
 
-    <!-- Manual UTR Entry -->
-    <div class="pt-2 border-t space-y-2">
-      <input id="inputUtr" type="text" placeholder="Enter 12-digit UPI UTR" class="w-full text-xs font-mono border rounded-xl px-3 py-2 text-center focus:outline-none focus:border-zomato-red">
-      <button onclick="submitUtrVerification()" class="w-full bg-zomato-dark text-white font-extrabold text-xs py-2.5 rounded-xl">
-        Confirm UPI Payment
-      </button>
+    <!-- Automatic confirmation status -->
+    <div class="pt-2 border-t space-y-1">
+      <p id="payWaitText" class="text-xs font-bold text-gray-600"><i class="fa-solid fa-spinner fa-spin"></i> Waiting for your payment…</p>
+      <p class="text-[10px] text-gray-400 font-bold">Pay within <span id="payCountdown">15:00</span>. This page updates automatically.</p>
     </div>
   </div>
  </div>
@@ -409,12 +356,17 @@ function openPaymentModal() {
   const total = Math.max(1, subtotal - discount);
 
   document.getElementById('modalPayTotal').innerText = `₹${total}`;
+  try {
+    const c = JSON.parse(localStorage.getItem('hs_contact') || 'null');
+    if (c) { document.getElementById('custName').value ||= c.name || ''; document.getElementById('custPhone').value ||= c.phone || ''; }
+  } catch {}
   toggleCart(false);
   document.getElementById('payModal')?.classList.remove('hidden');
   document.getElementById('payModal')?.classList.add('flex');
 }
 
 function closePaymentModal() {
+  stopPayPolling();
   document.getElementById('payModal')?.classList.add('hidden');
   document.getElementById('payModal')?.classList.remove('flex');
   document.getElementById('payInitView')?.classList.remove('hidden');
@@ -422,158 +374,100 @@ function closePaymentModal() {
 }
 
 function selectPayOption(method) {
-  const cardBlock = document.getElementById('cardDetailsBlock');
-  const payBtnLabel = document.getElementById('payBtnLabel');
-  
-  if (method === 'card') {
-    cardBlock.classList.remove('hidden');
-    payBtnLabel.innerText = 'Pay with Card';
-  } else if (method === 'cod') {
-    cardBlock.classList.add('hidden');
-    payBtnLabel.innerText = 'Place COD Order';
-  } else {
-    cardBlock.classList.add('hidden');
-    payBtnLabel.innerText = 'Launch UPI Checkout';
-  }
+  document.getElementById('payBtnLabel').innerText = method === 'cod' ? 'Place COD Order' : 'Launch UPI Checkout';
 }
 
-function formatCardNumber(input) {
-  let val = input.value.replace(/\D/g, '').substring(0, 16);
-  let parts = [];
-  for (let i = 0; i < val.length; i += 4) parts.push(val.substring(i, i + 4));
-  input.value = parts.join(' ');
+let payPollTimer = null, payCountdownTimer = null;
+
+function stopPayPolling() {
+  clearInterval(payPollTimer);
+  clearInterval(payCountdownTimer);
+  payPollTimer = payCountdownTimer = null;
 }
 
-function formatExpiry(input) {
-  let val = input.value.replace(/\D/g, '').substring(0, 4);
-  if (val.length >= 3) input.value = val.substring(0, 2) + '/' + val.substring(2);
-  else input.value = val;
-}
-
-// Payment Execution: Handles UPI, Card, and COD
+// The browser only sends item ids + quantities. The server prices the order,
+// applies the coupon, and picks the exact amount to pay.
 async function payNow() {
-  const method = document.querySelector('input[name="payMethod"]:checked')?.value || 'youpi';
-  const subtotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
-  let discount = 0;
-  if (appliedCoupon) discount = Math.round(subtotal * appliedCoupon.rate);
-  const total = Math.max(1, subtotal - discount);
-  const orderId = 'HS' + Date.now();
-  currentActiveOrderId = orderId;
+  const method = document.querySelector('input[name="payMethod"]:checked')?.value === 'cod' ? 'COD' : 'UPI';
+  const name = document.getElementById('custName').value.trim();
+  const phone = document.getElementById('custPhone').value.replace(/\D/g, '');
+  if (name.length < 2) { alert('Please enter your name.'); return; }
+  if (!/^[6-9]\d{9}$/.test(phone)) { alert('Please enter a valid 10-digit mobile number.'); return; }
+  try { localStorage.setItem('hs_contact', JSON.stringify({ name, phone })); } catch {}
 
-  // 1. Cash on Delivery
-  if (method === 'cod') {
-    closePaymentModal();
-    handlePaymentSuccess(orderId, 'COD-ORDER', 'Cash on Delivery');
-    return;
-  }
-
-  // 2. Card Payment Option
-  if (method === 'card') {
-    const cardNum = document.getElementById('cardNumber')?.value.replace(/\s+/g, '');
-    const cardExp = document.getElementById('cardExpiry')?.value;
-    const cardCvv = document.getElementById('cardCvv')?.value;
-    const cardName = document.getElementById('cardName')?.value.trim();
-
-    if (!cardNum || cardNum.length < 15 || !cardExp || !cardCvv || !cardName) {
-      alert('Please fill out all card details accurately.');
-      return;
-    }
-
-    const btn = document.getElementById('confirmPayBtn');
-    btn.disabled = true;
-    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Processing Card...</span>`;
-
-    try {
-      const res = await fetch('/api/payments/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId: orderId,
-          amount: total,
-          paymentMethod: 'CARD',
-          cardLast4: cardNum.slice(-4),
-          cardHolder: cardName,
-          customerPhone: '9462942290',
-          customerName: cardName,
-          branch: 'Borkheda, Kota',
-          items: cart,
-          coupon: appliedCoupon ? appliedCoupon.code : null
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Card processing failed');
-
-      closePaymentModal();
-      handlePaymentSuccess(orderId, `CARD-AUTH-${data.authRef || '98234'}`, `Card ending in ${cardNum.slice(-4)}`);
-    } catch (err) {
-      alert('Card error: ' + err.message);
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = `<span>Pay with Card</span><i class="fa-solid fa-arrow-right"></i>`;
-    }
-    return;
-  }
-
-  // 3. UPI Checkout
   const btn = document.getElementById('confirmPayBtn');
+  const original = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Generating UPI...</span>`;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Please wait...</span>';
 
   try {
     const res = await fetch('/api/payments/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        orderId: orderId,
-        amount: total,
-        paymentMethod: 'UPI',
-        customerPhone: '9462942290',
-        customerName: 'Hungerr Customer',
-        branch: 'Borkheda, Kota',
-        items: cart,
+        method, name, phone,
+        items: cart.map(i => ({ id: i.id, qty: i.qty })),
         coupon: appliedCoupon ? appliedCoupon.code : null
-      }),
+      })
     });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Could not place your order. Please try again.');
 
-    const data = await res.json();
-    if (!res.ok || !data.upiUri) {
-      throw new Error(data.error || 'Failed to generate payment details');
+    if (method === 'COD') {
+      closePaymentModal();
+      handlePaymentSuccess(data.orderId, 'Pay on delivery', 'Cash on Delivery', 'COD');
+    } else {
+      showUpiQr(data);
     }
-
-    document.getElementById('payInitView').classList.add('hidden');
-    document.getElementById('payQrView').classList.remove('hidden');
-
-    document.getElementById('qrCodeImg').src = data.qrUrl;
-    document.getElementById('upiIntentBtn').href = data.upiUri;
-
   } catch (err) {
-    alert("Payment Error: " + err.message);
+    alert(err.message);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = `<span>Launch UPI Checkout</span><i class="fa-solid fa-arrow-right"></i>`;
+    btn.innerHTML = original;
   }
 }
 
-async function submitUtrVerification() {
-  const utr = document.getElementById('inputUtr')?.value.trim();
-  const orderId = currentActiveOrderId;
+function showUpiQr(data) {
+  document.getElementById('payInitView').classList.add('hidden');
+  document.getElementById('payQrView').classList.remove('hidden');
+  document.getElementById('payExactAmt').innerText = '₹' + data.amount;
+  document.getElementById('payWaitText').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Waiting for your payment…';
 
+  const qr = qrcode(0, 'M');
+  qr.addData(data.upiUri);
+  qr.make();
+  document.getElementById('qrCodeImg').src = qr.createDataURL(6, 2);
+  document.getElementById('upiIntentBtn').href = data.upiUri;
+
+  const expiresAt = new Date(data.expiresAt).getTime();
+  const cd = document.getElementById('payCountdown');
+  const tick = () => {
+    const s = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+    cd.innerText = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  };
+  tick();
+  stopPayPolling();
+  payCountdownTimer = setInterval(tick, 1000);
+  payPollTimer = setInterval(() => pollPayment(data.orderId), 3000);
+}
+
+async function pollPayment(orderId) {
   try {
-    await fetch('/api/payments/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId: orderId, utr: utr || 'VERIFIED-UPI' })
-    });
-  } catch (e) {
-    console.warn('Verify sync notice:', e);
-  }
-
-  closePaymentModal();
-  handlePaymentSuccess(orderId, utr || 'BHARATPE.9V0C0B1Y6C197301@unitype', 'UPI Payment');
+    const res = await fetch('/api/payments/status?orderId=' + encodeURIComponent(orderId), { cache: 'no-store' });
+    if (!res.ok) return;
+    const s = await res.json();
+    if (s.status === 'PAID') {
+      closePaymentModal();
+      handlePaymentSuccess(orderId, s.utr || 'Auto-verified', 'UPI Payment', 'PAID');
+    } else if (s.status === 'EXPIRED') {
+      stopPayPolling();
+      document.getElementById('payWaitText').innerText =
+        'This payment window has expired. If you already paid, please contact us with order ID ' + orderId + '.';
+    }
+  } catch (e) { /* network blip: keep polling */ }
 }
 
-function handlePaymentSuccess(orderId, ref, method = 'UPI') {
+function handlePaymentSuccess(orderId, ref, method = 'UPI', status = 'PAID') {
   cart = [];
   appliedCoupon = null;
   saveCart();
@@ -582,6 +476,7 @@ function handlePaymentSuccess(orderId, ref, method = 'UPI') {
 
   document.getElementById('trackOrderId').innerText = `Order ID: #${orderId}`;
   document.getElementById('trackMethod').innerText = method;
+  document.getElementById('trackStatus').innerText = status === 'COD' ? 'PAY ON DELIVERY' : 'PAID';
   document.getElementById('trackUtr').innerText = ref;
   document.getElementById('track')?.classList.remove('hidden');
   document.getElementById('track')?.classList.add('flex');

@@ -8,7 +8,11 @@ database_name = "hungerr-db"
 database_id = "054ac9ef-ff11-4d8b-82af-a95830c706e5"
 
 [vars]
-YOUPI_API_URL = "https://creditpay.pages.dev"
-YOUPI_MERCHANT_ID = "hungerr_station_borkheda"
 UPI_VPA = "BHARATPE.9V0C0B1Y6C197301@unitype"
 UPI_PAYEE_NAME = "Hungerr Station"
+# Regex the forwarded alert's sender or text must match (case-insensitive). Tighten after
+# you've seen a real alert, e.g. "bharatpe". Leave empty only while testing.
+ALERT_MATCH_PATTERN = ""
+
+# Secret (do NOT put here). Set it with:
+#   npx wrangler pages secret put NOTIFY_SECRET --project-name hungerr-station
