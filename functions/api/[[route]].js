@@ -1,9 +1,11 @@
+// functions/api/[[route]].js
+
 export async function onRequest(context) {
   const { request } = context;
   const url = new URL(request.url);
-  const path = url.pathname;
+  const path = url.pathname.replace(/\/+$/, ''); // Strip any trailing slashes
 
-  // CORS pre-flight
+  // 1. CORS Preflight
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -15,23 +17,27 @@ export async function onRequest(context) {
     });
   }
 
-  // Handle payment session creation
-  if (path === '/api/payments/create') {
+  // 2. Handle payment creation (matches both /api/payments/create and /payments/create)
+  if (path.endsWith('/payments/create')) {
     if (request.method !== 'POST') {
       return Response.json({ error: 'Method not allowed' }, { status: 405 });
     }
     return handleCreatePayment(context);
   }
 
-  // Handle gateway webhook
-  if (path === '/api/payments/webhook') {
+  // 3. Handle webhook notification (matches both /api/payments/webhook and /payments/webhook)
+  if (path.endsWith('/payments/webhook')) {
     if (request.method !== 'POST') {
       return Response.json({ error: 'Method not allowed' }, { status: 405 });
     }
     return handleGatewayWebhook(context);
   }
 
-  return Response.json({ error: 'Endpoint not found' }, { status: 404 });
+  // 4. Fallback if no matching endpoint
+  return Response.json(
+    { error: `Endpoint not found: ${url.pathname}` }, 
+    { status: 404 }
+  );
 }
 
 // 1. Create Payment Session
@@ -46,25 +52,29 @@ async function handleCreatePayment(context) {
       return Response.json({ error: 'Missing required order details' }, { status: 400 });
     }
 
-    // Persist pending order to Cloudflare D1
+    // Persist pending order to Cloudflare D1 if configured
     if (env.DB) {
       const ts = new Date().toISOString();
-      await env.DB.prepare(
-        `INSERT OR IGNORE INTO orders (cid, ts, status, phone, name, branch, mode, pay, subtotal, total, items)
-         VALUES (?, ?, 'PENDING', ?, ?, ?, 'Delivery', 'YouPI', ?, ?, ?)`
-      ).bind(
-        orderId,
-        ts,
-        customerPhone || 'N/A',
-        customerName || 'Guest',
-        branch || 'Borkheda',
-        amount,
-        amount,
-        JSON.stringify(items || [])
-      ).run();
+      try {
+        await env.DB.prepare(
+          `INSERT OR IGNORE INTO orders (cid, ts, status, phone, name, branch, mode, pay, subtotal, total, items)
+           VALUES (?, ?, 'PENDING', ?, ?, ?, 'Delivery', 'YouPI', ?, ?, ?)`
+        ).bind(
+          orderId,
+          ts,
+          customerPhone || 'N/A',
+          customerName || 'Guest',
+          branch || 'Borkheda',
+          amount,
+          amount,
+          JSON.stringify(items || [])
+        ).run();
+      } catch (dbErr) {
+        console.warn('D1 Insert warning:', dbErr.message);
+      }
     }
 
-    // Connect to YouPI Gateway
+    // Gateway API Configuration
     const gatewayUrl = (env.YOUPI_API_URL || 'https://creditpay.pages.dev').replace(/\/+$/, '');
     const origin = new URL(request.url).origin;
 
